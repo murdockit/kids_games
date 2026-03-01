@@ -25,6 +25,16 @@ const WORDS_RAW: Array<{ word: string; emoji: string }> = [
   { word: 'fox', emoji: '🦊' },
   { word: 'owl', emoji: '🦉' },
   { word: 'log', emoji: '🪵' },
+  { word: 'bat', emoji: '🦇' },
+  { word: 'bed', emoji: '🛏️' },
+  { word: 'box', emoji: '📦' },
+  { word: 'bug', emoji: '🐛' },
+  { word: 'dot', emoji: '🔵' },
+  { word: 'egg', emoji: '🥚' },
+  { word: 'fig', emoji: '🍑' },
+  { word: 'jam', emoji: '🍓' },
+  { word: 'jet', emoji: '✈️' },
+  { word: 'net', emoji: '🥅' },
 ];
 
 export function getShuffledWords(): WordEntry[] {

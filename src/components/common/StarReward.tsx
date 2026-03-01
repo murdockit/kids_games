@@ -3,7 +3,7 @@ interface StarRewardProps {
   message?: string;
 }
 
-export function StarReward({ count = 1, message = 'Great job!' }: StarRewardProps) {
+export function StarReward({ count = 1, message = 'Great job, Lydia!' }: StarRewardProps) {
   return (
     <div className="flex flex-col items-center gap-2">
       <div className="flex gap-1">

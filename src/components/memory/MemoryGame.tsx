@@ -56,7 +56,7 @@ export function MemoryGame() {
           setFlipped([]);
           setChecking(false);
         }
-      }, 900);
+      }, 1400);
     },
     [flipped, matched, checking, cards, play]
   );
@@ -82,7 +82,7 @@ export function MemoryGame() {
       <main className="flex-1 flex flex-col items-center justify-center px-4 gap-6">
         {won ? (
           <div className="flex flex-col items-center gap-6">
-            <StarReward count={3} message="You matched them all!" />
+            <StarReward count={3} message="You matched them all, Lydia!" />
             <button
               onClick={reset}
               className="bg-kidgreen text-white font-extrabold text-xl rounded-2xl px-8 py-4 shadow-lg active:scale-95 transition-transform"

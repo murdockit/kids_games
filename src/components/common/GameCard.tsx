@@ -28,6 +28,9 @@ export function GameCard({ id, emoji, title, description, bgColor }: GameCardPro
           {'⭐'.repeat(Math.min(progress.stars, 5))}
         </span>
       )}
+      {progress.bestStreak > 0 && (
+        <span className="text-xs font-bold text-white/70">Best: {progress.bestStreak} 🔥</span>
+      )}
     </button>
   );
 }

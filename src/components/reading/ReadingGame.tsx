@@ -84,7 +84,7 @@ export function ReadingGame() {
 
       <main className="flex-1 flex flex-col items-center justify-center px-4 gap-8">
         {celebrating ? (
-          <StarReward message={`"${currentWord.word.toUpperCase()}" 🎉`} />
+          <StarReward message={`"${currentWord.word.toUpperCase()}" — Way to go, Lydia! 🎉`} />
         ) : (
           <>
             {/* Word card with emoji */}

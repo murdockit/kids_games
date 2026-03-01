@@ -45,14 +45,22 @@ export function HomeScreen() {
       {/* Header */}
       <header className="flex items-center justify-between px-4 pt-6 pb-2">
         <div>
-          <h1 className="text-3xl font-extrabold text-kidblue leading-tight">Kids Games</h1>
-          <p className="text-base font-semibold text-gray-500">Pick a game to play!</p>
+          <h1 className="text-3xl font-extrabold text-kidblue leading-tight">Lydia's Games</h1>
+          <p className="text-base font-semibold text-gray-500">Hi Lydia! Pick a game 🌟</p>
         </div>
         <SoundToggle />
       </header>
 
+      {/* Welcome card */}
+      <div className="px-4 pt-3">
+        <div className="bg-white rounded-3xl px-6 py-4 shadow text-center max-w-md mx-auto w-full">
+          <p className="text-2xl font-extrabold text-kidblue">Hi Lydia! 👋</p>
+          <p className="text-gray-500 font-semibold">Ready to play and learn?</p>
+        </div>
+      </div>
+
       {/* Hero emoji */}
-      <div className="flex justify-center py-4">
+      <div className="flex justify-center py-3">
         <span className="text-7xl animate-bounce2">🌟</span>
       </div>
 

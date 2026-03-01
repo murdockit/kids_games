@@ -1,6 +1,9 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { BackButton } from '../common/BackButton';
 import { SoundToggle } from '../common/SoundToggle';
+import { StarReward } from '../common/StarReward';
+import { useSound } from '../../hooks/useSound';
+import { addStar } from '../../utils/storageUtils';
 
 const COLORS = [
   '#EF4444', '#F97316', '#FACC15', '#22C55E',
@@ -19,6 +22,8 @@ export function DrawingGame() {
   const [color, setColor] = useState('#4F46E5');
   const [brushSize, setBrushSize] = useState(28);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [celebrating, setCelebrating] = useState(false);
+  const [totalStars, setTotalStars] = useState(0);
   const lastPos = useRef<{ x: number; y: number } | null>(null);
 
   // Resize canvas to match display size
@@ -27,11 +32,9 @@ export function DrawingGame() {
     if (!canvas) return;
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
-      // Save current drawing
       const tmp = canvas.toDataURL();
       canvas.width = rect.width;
       canvas.height = rect.height;
-      // Restore drawing
       const img = new Image();
       img.onload = () => canvas.getContext('2d')?.drawImage(img, 0, 0);
       img.src = tmp;
@@ -40,6 +43,8 @@ export function DrawingGame() {
     window.addEventListener('resize', resize);
     return () => window.removeEventListener('resize', resize);
   }, []);
+
+  const { play } = useSound();
 
   const getPos = (e: React.MouseEvent | React.TouchEvent): { x: number; y: number } | null => {
     const canvas = canvasRef.current;
@@ -97,13 +102,39 @@ export function DrawingGame() {
     ctx?.clearRect(0, 0, canvas.width, canvas.height);
   };
 
+  const saveDrawing = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = 'lydia-drawing.png';
+    a.click();
+  };
+
+  const handleDone = () => {
+    play('star');
+    const progress = addStar('drawing');
+    setTotalStars(progress.stars);
+    setCelebrating(true);
+    setTimeout(() => setCelebrating(false), 1800);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-50 to-rose-50 flex flex-col">
       <header className="flex items-center justify-between px-4 pt-6 pb-2">
         <BackButton />
-        <h2 className="text-xl font-extrabold text-kidpink">Draw & Color</h2>
-        <SoundToggle />
+        <div className="flex items-center gap-3">
+          <span className="text-lg font-bold text-kidpink">⭐ {totalStars}</span>
+          <SoundToggle />
+        </div>
       </header>
+
+      {/* Celebration overlay */}
+      {celebrating && (
+        <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10 rounded-none">
+          <StarReward count={2} message="Beautiful work, Lydia! 🎨" />
+        </div>
+      )}
 
       {/* Toolbar */}
       <div className="flex items-center gap-2 px-4 py-2 bg-white shadow-sm overflow-x-auto">
@@ -153,13 +184,27 @@ export function DrawingGame() {
           ))}
         </div>
 
-        {/* Clear button */}
-        <button
-          onClick={clearCanvas}
-          className="flex-shrink-0 ml-auto bg-red-100 text-kidred font-bold rounded-xl px-3 py-2 text-sm active:scale-95 transition-transform"
-        >
-          🗑 Clear
-        </button>
+        {/* Action buttons */}
+        <div className="flex gap-2 ml-auto flex-shrink-0">
+          <button
+            onClick={saveDrawing}
+            className="bg-blue-100 text-kidblue font-bold rounded-xl px-3 py-2 text-sm active:scale-95 transition-transform"
+          >
+            💾 Save
+          </button>
+          <button
+            onClick={clearCanvas}
+            className="bg-red-100 text-kidred font-bold rounded-xl px-3 py-2 text-sm active:scale-95 transition-transform"
+          >
+            🗑 Clear
+          </button>
+          <button
+            onClick={handleDone}
+            className="bg-kidpink text-white font-bold rounded-xl px-3 py-2 text-sm active:scale-95 transition-transform"
+          >
+            Done! 🌟
+          </button>
+        </div>
       </div>
 
       {/* Canvas */}

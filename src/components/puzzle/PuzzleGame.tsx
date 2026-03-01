@@ -15,6 +15,7 @@ export function PuzzleGame() {
   const [draggedId, setDraggedId] = useState<number | null>(null);
   const [won, setWon] = useState(false);
   const [totalStars, setTotalStars] = useState(0);
+  const [snappedSlots, setSnappedSlots] = useState<Set<number>>(new Set());
 
   const slots = config.cols * config.rows;
 
@@ -44,6 +45,12 @@ export function PuzzleGame() {
     // Check win after state update (use setTimeout to get updated state)
     setTimeout(() => {
       setPieces((prev) => {
+        // Find newly snapped correct slots and animate them
+        const newSnapped = new Set<number>();
+        prev.forEach((p) => { if (p.currentSlot === p.correctSlot) newSnapped.add(p.currentSlot); });
+        setSnappedSlots(newSnapped);
+        setTimeout(() => setSnappedSlots(new Set()), 400);
+
         const solved = prev.every((p) => p.currentSlot === p.correctSlot);
         if (solved && !won) {
           play('star');
@@ -77,7 +84,7 @@ export function PuzzleGame() {
       <main className="flex-1 flex flex-col items-center justify-center px-4 gap-6">
         {won ? (
           <div className="flex flex-col items-center gap-6">
-            <StarReward count={2} message={`${config.label} done! 🎉`} />
+            <StarReward count={2} message={`${config.label} done, Lydia! 🎉`} />
             <button
               onClick={nextPuzzle}
               className="bg-kidorange text-white font-extrabold text-xl rounded-2xl px-8 py-4 shadow-lg active:scale-95 transition-transform"
@@ -105,8 +112,9 @@ export function PuzzleGame() {
                     key={slot}
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={() => handleDrop(slot)}
-                    className={`w-28 h-28 rounded-2xl border-4 flex items-center justify-center text-6xl transition-colors
-                      ${isCorrect ? 'border-kidgreen bg-green-50' : 'border-gray-200 bg-gray-50'}`}
+                    className={`w-28 h-28 rounded-2xl border-4 flex items-center justify-center text-6xl transition-all duration-200
+                      ${isCorrect ? 'border-kidgreen bg-green-50' : 'border-gray-200 bg-gray-50'}
+                      ${snappedSlots.has(slot) ? 'scale-110' : 'scale-100'}`}
                   >
                     {piece ? (
                       <div

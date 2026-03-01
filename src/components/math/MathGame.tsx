@@ -74,7 +74,7 @@ export function MathGame() {
       <main className="flex-1 flex flex-col items-center justify-center px-4 gap-6">
         {won ? (
           <div className="flex flex-col items-center gap-6">
-            <StarReward count={3} message="Math Star! 🌟" />
+            <StarReward count={3} message="Math Star, Lydia! 🌟" />
             <button
               onClick={reset}
               className="bg-kidpurple text-white font-extrabold text-xl rounded-2xl px-8 py-4 shadow-lg active:scale-95 transition-transform"
