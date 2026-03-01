@@ -2,5 +2,5 @@ services:
   kids-games:
     build: .
     ports:
-      - "3000:80"
+      - "2021:80"
     restart: unless-stopped
