@@ -3,7 +3,7 @@ import { BackButton } from '../common/BackButton';
 import { SoundToggle } from '../common/SoundToggle';
 import { StarReward } from '../common/StarReward';
 import { useSound } from '../../hooks/useSound';
-import { addStar, getProgress } from '../../utils/storageUtils';
+import { addStar, getProgress, updateBestStreak } from '../../utils/storageUtils';
 import { getShuffledWords } from '../../data/wordsData';
 import type { WordEntry } from '../../types';
 
@@ -24,6 +24,10 @@ export function ReadingGame() {
   const [shaking, setShaking] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
   const [totalStars, setTotalStars] = useState(() => getProgress('reading').stars);
+  const [streak, setStreak] = useState(0);
+  const [bestStreak, setBestStreak] = useState(() => getProgress('reading').bestStreak);
+  // Whether the current word has had any wrong letter attempt
+  const [hadMistake, setHadMistake] = useState(false);
   const [availableLetters, setAvailableLetters] = useState<string[]>(() =>
     shuffle(words[0].scrambled)
   );
@@ -41,6 +45,7 @@ export function ReadingGame() {
         // Wrong letter
         play('incorrect');
         setShaking(true);
+        setHadMistake(true);
         setTimeout(() => setShaking(false), 500);
         return;
       }
@@ -57,16 +62,26 @@ export function ReadingGame() {
         setCelebrating(true);
         const progress = addStar('reading');
         setTotalStars(progress.stars);
+
+        // Update streak: only increment if no mistakes on this word
+        const nextStreak = hadMistake ? 0 : streak + 1;
+        setStreak(nextStreak);
+        if (!hadMistake) {
+          const saved = updateBestStreak('reading', nextStreak);
+          if (saved.bestStreak > bestStreak) setBestStreak(saved.bestStreak);
+        }
+
         setTimeout(() => {
           setCelebrating(false);
           const nextIndex = (index + 1) % words.length;
           setIndex(nextIndex);
           setSelected([]);
+          setHadMistake(false);
           setAvailableLetters(shuffle(words[nextIndex].scrambled));
         }, 1800);
       }
     },
-    [selected, shaking, celebrating, currentWord, availableLetters, index, words, play]
+    [selected, shaking, celebrating, currentWord, availableLetters, index, words, play, streak, hadMistake, bestStreak]
   );
 
   return (
@@ -75,6 +90,11 @@ export function ReadingGame() {
       <header className="flex items-center justify-between px-4 pt-6 pb-2">
         <BackButton />
         <div className="flex items-center gap-3">
+          {streak >= 3 && (
+            <span className="text-lg font-bold text-kidorange animate-bounce2">
+              🔥 {streak}
+            </span>
+          )}
           <span className="text-lg font-bold text-kidblue">
             ⭐ {totalStars}
           </span>
@@ -84,7 +104,14 @@ export function ReadingGame() {
 
       <main className="flex-1 flex flex-col items-center justify-center px-4 gap-8">
         {celebrating ? (
-          <StarReward message={`"${currentWord.word.toUpperCase()}" — Way to go, Lydia! 🎉`} />
+          <div className="flex flex-col items-center gap-4">
+            <StarReward message={`"${currentWord.word.toUpperCase()}" — Way to go, Lydia! 🎉`} />
+            {streak > 0 && (
+              <p className="text-xl font-extrabold text-kidorange">
+                🔥 {streak} in a row!
+              </p>
+            )}
+          </div>
         ) : (
           <>
             {/* Word card with emoji */}

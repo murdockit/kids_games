@@ -3,7 +3,7 @@ import { BackButton } from '../common/BackButton';
 import { SoundToggle } from '../common/SoundToggle';
 import { StarReward } from '../common/StarReward';
 import { useSound } from '../../hooks/useSound';
-import { addStar, getProgress } from '../../utils/storageUtils';
+import { addStar, getProgress, updateBestStreak } from '../../utils/storageUtils';
 import { generateProblem } from '../../data/mathData';
 import type { MathProblem } from '../../types';
 
@@ -13,6 +13,8 @@ export function MathGame() {
   const { play } = useSound();
   const [problem, setProblem] = useState<MathProblem>(() => generateProblem());
   const [correct, setCorrect] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [bestStreak, setBestStreak] = useState(() => getProgress('math').bestStreak);
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
   const [totalStars, setTotalStars] = useState(() => getProgress('math').stars);
   const [won, setWon] = useState(false);
@@ -35,6 +37,10 @@ export function MathGame() {
       play('correct');
       setFeedback('correct');
       const nextCorrect = correct + 1;
+      const nextStreak = streak + 1;
+      setStreak(nextStreak);
+      const saved = updateBestStreak('math', nextStreak);
+      if (saved.bestStreak > bestStreak) setBestStreak(saved.bestStreak);
       setTimeout(() => {
         if (nextCorrect >= GOAL) {
           play('star');
@@ -50,12 +56,14 @@ export function MathGame() {
     } else {
       play('incorrect');
       setFeedback('wrong');
+      setStreak(0);
       setTimeout(() => setFeedback(null), 600);
     }
   };
 
   const reset = () => {
     setCorrect(0);
+    setStreak(0);
     setProblem(generateProblem());
     setFeedback(null);
     setWon(false);
@@ -66,6 +74,11 @@ export function MathGame() {
       <header className="flex items-center justify-between px-4 pt-6 pb-2">
         <BackButton />
         <div className="flex items-center gap-3">
+          {streak >= 3 && (
+            <span className="text-lg font-bold text-kidorange animate-bounce2">
+              🔥 {streak}
+            </span>
+          )}
           <span className="text-lg font-bold text-kidpurple">⭐ {totalStars}</span>
           <SoundToggle />
         </div>
@@ -75,6 +88,11 @@ export function MathGame() {
         {won ? (
           <div className="flex flex-col items-center gap-6">
             <StarReward count={3} message="Math Star, Lydia! 🌟" />
+            {bestStreak > 0 && (
+              <p className="text-base font-bold text-kidorange">
+                Best streak: {bestStreak} 🔥
+              </p>
+            )}
             <button
               onClick={reset}
               className="bg-kidpurple text-white font-extrabold text-xl rounded-2xl px-8 py-4 shadow-lg active:scale-95 transition-transform"

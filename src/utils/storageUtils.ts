@@ -25,3 +25,11 @@ export function addStar(gameId: string): ProgressData {
   saveProgress(gameId, updated);
   return updated;
 }
+
+export function updateBestStreak(gameId: string, streak: number): ProgressData {
+  const p = getProgress(gameId);
+  if (streak <= p.bestStreak) return p;
+  const updated = { ...p, bestStreak: streak };
+  saveProgress(gameId, updated);
+  return updated;
+}
