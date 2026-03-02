@@ -25,7 +25,7 @@ export function ReadingGame() {
   const [celebrating, setCelebrating] = useState(false);
   const [totalStars, setTotalStars] = useState(0);
   const [availableLetters, setAvailableLetters] = useState<string[]>(() =>
-    shuffle(getShuffledWords()[0].scrambled)
+    shuffle(words[0].scrambled)
   );
 
   const currentWord = words[index];

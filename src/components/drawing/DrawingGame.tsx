@@ -120,7 +120,7 @@ export function DrawingGame() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-pink-50 to-rose-50 flex flex-col">
+    <div className="h-screen overflow-hidden bg-gradient-to-b from-pink-50 to-rose-50 flex flex-col">
       <header className="flex items-center justify-between px-4 pt-6 pb-2">
         <BackButton />
         <div className="flex items-center gap-3">

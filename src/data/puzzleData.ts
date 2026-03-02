@@ -15,7 +15,7 @@ export interface PuzzlePiece {
 }
 
 export function buildPuzzle(config: PuzzleConfig): PuzzlePiece[] {
-  const emojis = config.emoji.split(/(?<=\p{Emoji})/u).filter(Boolean);
+  const emojis = [...new Intl.Segmenter().segment(config.emoji)].map(s => s.segment);
   const total = config.cols * config.rows;
   const pieces: PuzzlePiece[] = Array.from({ length: total }, (_, i) => ({
     id: i,
