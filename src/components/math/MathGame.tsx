@@ -3,7 +3,7 @@ import { BackButton } from '../common/BackButton';
 import { SoundToggle } from '../common/SoundToggle';
 import { StarReward } from '../common/StarReward';
 import { useSound } from '../../hooks/useSound';
-import { addStar } from '../../utils/storageUtils';
+import { addStar, getProgress } from '../../utils/storageUtils';
 import { generateProblem } from '../../data/mathData';
 import type { MathProblem } from '../../types';
 
@@ -14,7 +14,7 @@ export function MathGame() {
   const [problem, setProblem] = useState<MathProblem>(() => generateProblem());
   const [correct, setCorrect] = useState(0);
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
-  const [totalStars, setTotalStars] = useState(0);
+  const [totalStars, setTotalStars] = useState(() => getProgress('math').stars);
   const [won, setWon] = useState(false);
 
   const emojiRow = useMemo(

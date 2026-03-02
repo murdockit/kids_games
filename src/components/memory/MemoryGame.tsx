@@ -4,7 +4,7 @@ import { SoundToggle } from '../common/SoundToggle';
 import { StarReward } from '../common/StarReward';
 import { MemoryCard } from './MemoryCard';
 import { useSound } from '../../hooks/useSound';
-import { addStar } from '../../utils/storageUtils';
+import { addStar, getProgress } from '../../utils/storageUtils';
 import { buildMemoryDeck } from '../../data/memoryData';
 
 export function MemoryGame() {
@@ -13,7 +13,7 @@ export function MemoryGame() {
   const [flipped, setFlipped] = useState<number[]>([]);
   const [matched, setMatched] = useState<Set<number>>(new Set());
   const [checking, setChecking] = useState(false);
-  const [totalStars, setTotalStars] = useState(0);
+  const [totalStars, setTotalStars] = useState(() => getProgress('memory').stars);
   const [won, setWon] = useState(false);
 
   const handleCardClick = useCallback(

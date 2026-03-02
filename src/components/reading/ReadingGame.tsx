@@ -3,7 +3,7 @@ import { BackButton } from '../common/BackButton';
 import { SoundToggle } from '../common/SoundToggle';
 import { StarReward } from '../common/StarReward';
 import { useSound } from '../../hooks/useSound';
-import { addStar } from '../../utils/storageUtils';
+import { addStar, getProgress } from '../../utils/storageUtils';
 import { getShuffledWords } from '../../data/wordsData';
 import type { WordEntry } from '../../types';
 
@@ -23,7 +23,7 @@ export function ReadingGame() {
   const [selected, setSelected] = useState<string[]>([]);
   const [shaking, setShaking] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
-  const [totalStars, setTotalStars] = useState(0);
+  const [totalStars, setTotalStars] = useState(() => getProgress('reading').stars);
   const [availableLetters, setAvailableLetters] = useState<string[]>(() =>
     shuffle(words[0].scrambled)
   );

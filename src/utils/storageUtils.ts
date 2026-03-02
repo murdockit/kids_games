@@ -3,7 +3,12 @@ import type { ProgressData } from '../types';
 export function getProgress(gameId: string): ProgressData {
   try {
     const raw = localStorage.getItem(`progress_${gameId}`);
-    if (raw) return JSON.parse(raw) as ProgressData;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (typeof parsed?.stars === 'number' && typeof parsed?.bestStreak === 'number') {
+        return parsed as ProgressData;
+      }
+    }
   } catch {/* ignore */}
   return { stars: 0, bestStreak: 0 };
 }

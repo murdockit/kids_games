@@ -3,7 +3,7 @@ import { BackButton } from '../common/BackButton';
 import { SoundToggle } from '../common/SoundToggle';
 import { StarReward } from '../common/StarReward';
 import { useSound } from '../../hooks/useSound';
-import { addStar } from '../../utils/storageUtils';
+import { addStar, getProgress } from '../../utils/storageUtils';
 
 const COLORS = [
   '#EF4444', '#F97316', '#FACC15', '#22C55E',
@@ -23,7 +23,7 @@ export function DrawingGame() {
   const [brushSize, setBrushSize] = useState(28);
   const [isDrawing, setIsDrawing] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
-  const [totalStars, setTotalStars] = useState(0);
+  const [totalStars, setTotalStars] = useState(() => getProgress('drawing').stars);
   const lastPos = useRef<{ x: number; y: number } | null>(null);
 
   // Resize canvas to match display size

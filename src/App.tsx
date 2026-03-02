@@ -6,6 +6,7 @@ import { MemoryGame } from './components/memory/MemoryGame';
 import { PuzzleGame } from './components/puzzle/PuzzleGame';
 import { DrawingGame } from './components/drawing/DrawingGame';
 import { MathGame } from './components/math/MathGame';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 function GameRouter() {
   const { currentGame } = useContext(GameContext);
@@ -22,7 +23,9 @@ function GameRouter() {
 export default function App() {
   return (
     <GameProvider>
-      <GameRouter />
+      <ErrorBoundary>
+        <GameRouter />
+      </ErrorBoundary>
     </GameProvider>
   );
 }

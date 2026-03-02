@@ -3,7 +3,7 @@ import { BackButton } from '../common/BackButton';
 import { SoundToggle } from '../common/SoundToggle';
 import { StarReward } from '../common/StarReward';
 import { useSound } from '../../hooks/useSound';
-import { addStar } from '../../utils/storageUtils';
+import { addStar, getProgress } from '../../utils/storageUtils';
 import { PUZZLES, buildPuzzle } from '../../data/puzzleData';
 import type { PuzzlePiece } from '../../data/puzzleData';
 
@@ -14,7 +14,7 @@ export function PuzzleGame() {
   const [pieces, setPieces] = useState<PuzzlePiece[]>(() => buildPuzzle(config));
   const [draggedId, setDraggedId] = useState<number | null>(null);
   const [won, setWon] = useState(false);
-  const [totalStars, setTotalStars] = useState(0);
+  const [totalStars, setTotalStars] = useState(() => getProgress('puzzle').stars);
   const [snappedSlots, setSnappedSlots] = useState<Set<number>>(new Set());
 
   const slots = config.cols * config.rows;
