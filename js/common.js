@@ -48,34 +48,79 @@ export function sample(arr, n) {
 }
 
 // ---------- Speech ----------
+// iPads ship robotic "compact" voices by default; the free downloadable Enhanced/Premium voices
+// (Settings → Accessibility → Spoken Content → Voices) sound far more natural, so rank those first.
+const NATURAL = ['ava', 'zoe', 'evan', 'allison', 'susan', 'nicky', 'joelle', 'noelle', 'tom', 'samantha', 'aria', 'jenny'];
+const NOVELTY = [
+  'albert', 'bad news', 'bahh', 'bells', 'boing', 'bubbles', 'cellos', 'good news', 'jester', 'organ',
+  'superstar', 'trinoids', 'whisper', 'wobble', 'zarvox', 'fred', 'junior', 'ralph', 'kathy',
+  'eddy', 'flo', 'grandma', 'grandpa', 'reed', 'rocko', 'sandy', 'shelley',
+];
+
+function voiceScore(v) {
+  const id = `${v.name} ${v.voiceURI}`.toLowerCase();
+  const name = v.name.toLowerCase();
+  if (id.includes('eloquence') || NOVELTY.some((n) => name === n || name.startsWith(`${n} `))) return -1;
+  let score = 0;
+  if (id.includes('premium')) score += 100;
+  else if (id.includes('enhanced') || id.includes('natural') || id.includes('neural')) score += 60;
+  if (NATURAL.some((n) => name.includes(n))) score += 20;
+  if (v.lang.replace('_', '-') === 'en-US') score += 10;
+  if (v.localService) score += 5;
+  return score;
+}
+
+export const SPEEDS = { slower: 0.85, normal: 0.95, faster: 1.05 };
+
+// English voices worth offering, best first, with a friendly label.
+export function listVoices() {
+  if (!('speechSynthesis' in window)) return [];
+  return speechSynthesis
+    .getVoices()
+    .filter((v) => v.lang && v.lang.toLowerCase().startsWith('en'))
+    .map((v) => ({ voice: v, score: voiceScore(v) }))
+    .filter((x) => x.score >= 0)
+    .sort((a, b) => b.score - a.score || a.voice.name.localeCompare(b.voice.name))
+    .map(({ voice: v }) => {
+      const id = `${v.name} ${v.voiceURI}`.toLowerCase();
+      const quality = id.includes('premium') ? 'Premium' : id.includes('enhanced') ? 'Enhanced' : '';
+      const label = v.name.includes('(') || !quality ? v.name : `${v.name} (${quality})`;
+      return { uri: v.voiceURI, label: `${label} · ${v.lang}`, voice: v };
+    });
+}
+
 let voice = null;
 function chooseVoice() {
-  if (!('speechSynthesis' in window)) return;
-  const voices = speechSynthesis.getVoices().filter((v) => v.lang && v.lang.toLowerCase().startsWith('en'));
-  const preferred = ['Samantha', 'Karen', 'Moira', 'Google US English', 'Microsoft Aria', 'Microsoft Jenny'];
-  voice =
-    preferred.map((name) => voices.find((v) => v.name.includes(name))).find(Boolean) ||
-    voices.find((v) => v.lang === 'en-US' && v.localService) ||
-    voices.find((v) => v.lang === 'en-US') ||
-    voices[0] ||
-    null;
+  const voices = listVoices();
+  const saved = getSettings().voiceURI;
+  voice = voices.find((v) => v.uri === saved)?.voice || voices[0]?.voice || null;
 }
 if ('speechSynthesis' in window) {
   chooseVoice();
   speechSynthesis.addEventListener?.('voiceschanged', chooseVoice);
 }
 
+export function currentVoiceURI() {
+  return voice?.voiceURI || '';
+}
+
+export function setVoice(uri) {
+  setSettings({ voiceURI: uri || '' });
+  chooseVoice();
+}
+
 // Speaks text and resolves when finished (or after a safety timeout, since iOS doesn't always fire onend).
-export function say(text, { rate = 0.85, pitch = 1.1 } = {}) {
+export function say(text) {
   return new Promise((resolve) => {
     if (!text || !getSettings().speech || !('speechSynthesis' in window)) return resolve();
     speechSynthesis.cancel();
+    const rate = SPEEDS[getSettings().speechRate] || SPEEDS.normal;
     const u = new SpeechSynthesisUtterance(text);
     if (voice) u.voice = voice;
     u.lang = voice?.lang || 'en-US';
     u.rate = rate;
-    u.pitch = pitch;
-    const timer = setTimeout(resolve, 900 + text.length * 110);
+    u.pitch = 1;
+    const timer = setTimeout(resolve, 900 + (text.length * 100) / rate);
     u.onend = u.onerror = () => {
       clearTimeout(timer);
       resolve();
@@ -304,6 +349,31 @@ export function doneScreen(main, { onAgain, onBack, message = `You did it, ${KID
   main.querySelector('[data-again]').addEventListener('click', onAgain);
   main.querySelector('[data-back]').addEventListener('click', onBack);
   say(`${message} You earned a star!`);
+}
+
+// A big ✔ / ✖ question (spoken), for things like "Start over?". Resolves true for ✔.
+export function askYesNo(question) {
+  return new Promise((resolve) => {
+    const overlay = el('div', 'overlay');
+    const box = el('div', 'overlay-box');
+    const yes = el('button', 'round-btn yes', '✔️');
+    const no = el('button', 'round-btn no', '✖️');
+    yes.setAttribute('aria-label', 'Yes');
+    no.setAttribute('aria-label', 'No');
+    const row = el('div', 'row');
+    row.append(yes, no);
+    box.append(el('p', 'prompt-text', question), row);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    say(question);
+    const done = (answer) => {
+      sfx('tap');
+      overlay.remove();
+      resolve(answer);
+    };
+    yes.addEventListener('click', () => done(true));
+    no.addEventListener('click', () => done(false));
+  });
 }
 
 export function el(tag, className, text) {

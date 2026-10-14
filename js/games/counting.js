@@ -42,7 +42,7 @@ function countable(thing, n) {
       b.dataset.counted = '1';
       b.style.background = '#ffe8a3';
       sfx('tap');
-      say(NUMBER_WORDS[counted] || String(counted), { rate: 1 });
+      say(NUMBER_WORDS[counted] || String(counted));
     });
     box.appendChild(b);
   }
