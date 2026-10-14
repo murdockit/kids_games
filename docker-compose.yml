@@ -1,6 +1,0 @@
-services:
-  kids-games:
-    build: .
-    ports:
-      - "2021:80"
-    restart: unless-stopped
