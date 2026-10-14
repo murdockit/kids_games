@@ -1,0 +1,14 @@
+{
+  "name": "Lydia's Games",
+  "short_name": "Lydia's Games",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#fff7e8",
+  "theme_color": "#fff7e8",
+  "icons": [
+    { "src": "icons/icon-192x192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512x512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

@@ -1,21 +1,32 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-    <meta name="theme-color" content="#4F46E5" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="KidsGames" />
-    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
-    <link rel="icon" type="image/png" href="/icons/icon-192x192.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-    <title>Kids Learning Games</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Lydia's Games">
+  <meta name="theme-color" content="#fff7e8">
+  <title>Lydia's Games</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+  <link rel="icon" href="icons/icon-192x192.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main id="app">
+    <p class="home-hello">Hi Lydia! Pick a game 🌟</p>
+    <nav class="tiles">
+      <a class="tile pink" href="games/heart-words.html"><span class="emoji">❤️</span>Heart Words</a>
+      <a class="tile blue" href="games/letters.html"><span class="emoji">🔤</span>Letters</a>
+      <a class="tile yellow" href="games/counting.html"><span class="emoji">🔢</span>Counting</a>
+      <a class="tile green" href="games/shapes.html"><span class="emoji">🔺</span>Shapes &amp; Colors</a>
+      <a class="tile purple" href="games/play.html"><span class="emoji">🎨</span>Free Play</a>
+    </nav>
+  </main>
+  <footer style="text-align:center;padding-bottom:12px">
+    <a class="grownups-link" href="grownups.html">Grown-ups ⚙️</a>
+  </footer>
+  <script type="module" src="js/home.js"></script>
+</body>
 </html>

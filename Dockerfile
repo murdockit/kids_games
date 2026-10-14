@@ -1,23 +1,13 @@
-# ---- Build stage ----
-FROM node:20-alpine AS builder
+# Lydia's Games: plain static files served by nginx. No build step.
+FROM nginx:1.27-alpine
 
-WORKDIR /app
-
-COPY package*.json ./
-RUN npm ci
-
-COPY . .
-RUN npm run build
-
-# ---- Serve stage ----
-FROM nginx:stable-alpine AS runner
-
-# Remove default nginx config and replace with ours
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# Copy built assets from build stage
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY index.html grownups.html manifest.webmanifest /usr/share/nginx/html/
+COPY css /usr/share/nginx/html/css
+COPY js /usr/share/nginx/html/js
+COPY games /usr/share/nginx/html/games
+COPY icons /usr/share/nginx/html/icons
+# Default word list baked in; docker-compose mounts ./data over it so edits apply without a rebuild.
+COPY data /usr/share/nginx/html/data
 
 EXPOSE 80
-
-CMD ["nginx", "-g", "daemon off;"]

@@ -1,6 +1,11 @@
 services:
-  kids-games:
+  lydias-games:
     build: .
+    image: lydias-games
+    container_name: lydias-games
     ports:
       - "2021:80"
+    volumes:
+      # Edit data/heart-words.json on this computer; the iPad sees it on the next page load.
+      - ./data:/usr/share/nginx/html/data:ro
     restart: unless-stopped

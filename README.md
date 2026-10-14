@@ -1,73 +1,50 @@
-# React + TypeScript + Vite
+# Lydia's Games
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Simple learning games for a kindergartner, made for an iPad. Plain HTML/CSS/JavaScript with no build step, served from a small nginx Docker container on your home network.
 
-Currently, two official plugins are available:
+| Game | Activities |
+| --- | --- |
+| ❤️ Heart Words | Find the word you hear · Flash cards · Build the word from letters |
+| 🔤 Letters | Find the letter you hear · Big & little letters · First sounds (which picture starts with B?) |
+| 🔢 Counting | How many? (tap to count out loud) · Which has more or fewer? · Add & take away within 10 |
+| 🔺 Shapes & Colors | Find the shape or color · What comes next? (patterns) · Sort into baskets |
+| 🎨 Free Play | Drawing pad with stamps · Bubble pop · Animal memory match |
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Every instruction is spoken, and 🔊 repeats it, so she doesn't need to read to play. There are no timers and no way to lose: a wrong tap wiggles and she tries again. Each round finishes with a cheer and a ⭐.
 
-## React Compiler
+## Run it
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```sh
+docker compose up -d --build
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Then on the iPad, open Safari and go to `http://<this-computer's-IP>:2021`. Tap **Share → Add to Home Screen** to get a full-screen app icon.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- After changing code: `docker compose up -d --build`
+- Without Docker: `python3 -m http.server 2021` in this folder
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Heart words
+
+- **Starter list:** `data/heart-words.json`. Docker mounts the `data/` folder, so edits show up the next time the page loads, with no rebuild.
+- **On the iPad:** tap **Grown-ups ⚙️** at the bottom of the home screen and answer the multiplication question. There you can add words (separate several with commas), remove words, mark words *Learned* (learned words come up less often), and see how many she has gotten right on the first try.
+- **Backup:** iPad changes are saved in Safari on that iPad. Use **Export words** to save a copy. The exported file has the same shape as `data/heart-words.json`, so you can drop it in as the new starter list. **Import words** restores a backup.
+
+## Good to know
+
+- **Keep the host's address fixed.** Safari saves her stars and word edits for each address. If the computer's IP changes, they will seem to be gone (they come back if the old address returns). Set up a DHCP reservation on your router, or use the computer's hostname.
+- **No offline mode.** Offline mode would need HTTPS, so the iPad has to be on home Wi-Fi with the container running.
+- **No sound?** Check that the iPad's side switch or Control Center mute is off. The Grown-ups screen can also turn spoken words and sound effects on or off.
+- **Lock her in:** iPad **Settings → Accessibility → Guided Access** keeps her inside the app. Triple-click the side button to start it.
+
+## Layout
+
+```
+index.html, grownups.html   home screen and grown-ups screen
+games/*.html                one page per game
+js/common.js                speech, sounds, cheers, stars, top bar, mode picker
+js/quiz.js                  shared multiple-choice round runner
+js/words-store.js           heart words: starter file + this iPad's changes
+js/games/*.js               each game's logic
+css/style.css               shared styles (big tap targets, no zoom/selection)
+data/heart-words.json       starter heart words
 ```
