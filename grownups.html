@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#fff7e8">
+  <title>Grown-ups · Lydia's Games</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* Grown-up screen: normal text sizes, selectable text, regular form controls. */
+    body { -webkit-user-select: text; user-select: text; }
+    .panel {
+      width: 100%;
+      max-width: 760px;
+      background: var(--card);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      padding: 20px 24px;
+      font-size: 18px;
+    }
+    .panel h2 { margin: 0 0 12px; font-size: 24px; }
+    .panel p { color: var(--muted); margin: 0 0 12px; }
+    .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    input[type="text"], input[type="number"] {
+      font: inherit;
+      font-size: 20px;
+      padding: 12px 14px;
+      border: 2px solid #e2d8c6;
+      border-radius: 14px;
+      flex: 1;
+      min-width: 160px;
+    }
+    .btn {
+      font-size: 18px;
+      font-weight: 700;
+      padding: 12px 18px;
+      border-radius: 14px;
+      background: var(--blue);
+      color: #fff;
+    }
+    .btn.light { background: #efe7d8; color: var(--ink); }
+    .btn.danger { background: #fde2e2; color: #b42318; }
+    .words { list-style: none; margin: 12px 0 0; padding: 0; }
+    .words li {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-top: 1px solid #f0e8da;
+    }
+    .words .w { font-size: 26px; font-weight: 800; flex: 1; }
+    .words .s { color: var(--muted); font-size: 16px; min-width: 110px; text-align: right; }
+    .words label { display: flex; align-items: center; gap: 6px; font-size: 16px; }
+    .words input[type="checkbox"] { width: 24px; height: 24px; }
+    .x { width: 44px; height: 44px; border-radius: 50%; background: #fde2e2; color: #b42318; font-size: 20px; font-weight: 800; }
+    .msg { min-height: 1.4em; color: var(--good); font-weight: 700; }
+    .gate { text-align: center; }
+    .gate .q { font-size: 44px; font-weight: 800; margin: 8px 0 16px; }
+  </style>
+</head>
+<body>
+  <main id="app"></main>
+  <script type="module" src="js/grownups.js"></script>
+</body>
+</html>
