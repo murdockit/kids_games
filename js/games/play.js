@@ -1,6 +1,8 @@
-// Free Play: no wrong answers. Drawing pad, bubble pop, and animal memory match.
-import { topBar, modePicker, pick, shuffle, say, sfx, cheer, doneScreen, el, randInt } from '../common.js';
+// Free Play: no wrong answers. Drawing pad, my saved pictures, bubble pop, and animal memory match.
+import { topBar, modePicker, pick, shuffle, say, sfx, cheer, doneScreen, el, randInt, askYesNo } from '../common.js';
 import { getWords } from '../words-store.js';
+import { draw } from './draw.js';
+import { listPictures, deletePicture } from '../gallery-store.js';
 
 const main = document.getElementById('app');
 const bar = topBar({ title: 'Free Play' });
@@ -17,7 +19,8 @@ const showPicker = modePicker({
   title: 'Free Play',
   intro: 'Free play! Pick something fun.',
   modes: [
-    { emoji: '🎨', name: 'Draw', color: 'pink', start: () => run(draw) },
+    { emoji: '🎨', name: 'Draw', color: 'pink', start: () => run(() => draw({ main, bar })) },
+    { emoji: '🖼️', name: 'My Pictures', color: 'orange', start: () => run(pictures) },
     { emoji: '🫧', name: 'Bubble Pop', color: 'blue', start: () => run(bubbles) },
     { emoji: '🐘', name: 'Memory Match', color: 'green', start: () => run(memory) },
   ],
@@ -30,140 +33,62 @@ function run(activity) {
     stopActivity();
     showPicker();
   });
-  cleanup = activity() || null;
+  const stop = activity();
+  cleanup = typeof stop === 'function' ? stop : null;
 }
 
-// ---------- Drawing pad ----------
-const PAINT = ['#ef4444', '#f97316', '#facc15', '#22c55e', '#3b82f6', '#a855f7', '#f472b6', '#8b5a2b', '#2b2d42'];
-const STAMPS = ['⭐', '❤️', '🌸', '🐶', '🦋', '🌈'];
-
-function draw() {
-  say('Draw anything you like!');
+// ---------- My Pictures ----------
+async function pictures() {
   bar.onRepeat(null);
   main.innerHTML = '';
-  main.style.justifyContent = 'flex-start';
-
-  const tools = el('div');
-  tools.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:10px';
-  const wrap = el('div');
-  wrap.style.cssText = 'flex:1;width:100%;min-height:300px;border-radius:28px;background:#fff;box-shadow:var(--shadow);overflow:hidden;position:relative';
-  const canvas = el('canvas');
-  canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;touch-action:none';
-  wrap.appendChild(canvas);
-  main.append(tools, wrap);
-
-  let color = PAINT[4];
-  let size = 14;
-  let stamp = null;
-  const buttons = [];
-
-  function toolButton(content, label, onPick, style = '') {
-    const b = el('button', 'round-btn');
-    b.innerHTML = content;
-    b.setAttribute('aria-label', label);
-    b.style.cssText = `width:64px;height:64px;font-size:30px;${style}`;
+  const all = await listPictures();
+  if (!all.length) {
+    main.innerHTML = '<p class="note">No pictures yet. Draw one and tap 💾 to save it!</p>';
+    say('No pictures yet. Draw one, and tap the save button!');
+    return;
+  }
+  say('Your pictures! Tap one to look at it.');
+  const grid = el('div', 'gallery');
+  for (const pic of all) {
+    const b = el('button', 'gallery-item');
+    b.setAttribute('aria-label', 'picture');
+    const img = el('img');
+    img.src = pic.thumb;
+    img.alt = '';
+    b.appendChild(img);
     b.addEventListener('click', () => {
       sfx('tap');
-      onPick(b);
+      preview(pic);
     });
-    tools.appendChild(b);
-    buttons.push(b);
-    return b;
+    grid.appendChild(b);
   }
-  function select(b) {
-    buttons.forEach((x) => (x.style.outline = ''));
-    b.style.outline = '5px solid #2b2d42';
-  }
+  main.appendChild(grid);
+}
 
-  PAINT.forEach((c, i) => {
-    const b = toolButton('', `paint color ${i + 1}`, (btn) => {
-      color = c;
-      stamp = null;
-      select(btn);
-    }, `background:${c}`);
-    if (c === color) select(b);
+function preview(pic) {
+  bar.onBack(() => run(pictures));
+  main.innerHTML = '';
+  const img = el('img', 'saveable');
+  img.src = pic.image;
+  img.alt = 'Lydia\'s picture';
+  const hint = el('p', 'note', 'Grown-ups: press and hold the picture to save it to Photos.');
+  const row = el('div', 'choices');
+  const edit = el('button', 'round-btn big-action', '✏️');
+  edit.setAttribute('aria-label', 'Keep drawing');
+  const del = el('button', 'round-btn big-action', '🗑️');
+  del.setAttribute('aria-label', 'Delete picture');
+  row.append(edit, del);
+  main.append(img, hint, row);
+  edit.addEventListener('click', () => {
+    sfx('tap');
+    bar.setTitle('Draw');
+    run(() => draw({ main, bar, resume: pic }));
   });
-  STAMPS.forEach((s) => toolButton(s, `stamp ${s}`, (btn) => {
-    stamp = s;
-    select(btn);
-  }));
-  toolButton('🖌️', 'big or small brush', () => {
-    size = size === 14 ? 30 : 14;
-    say(size === 30 ? 'Big brush' : 'Small brush');
+  del.addEventListener('click', async () => {
+    if (!(await askYesNo('Throw this picture away?'))) return;
+    await deletePicture(pic.id);
+    run(pictures);
   });
-  toolButton('🧽', 'eraser', (btn) => {
-    color = '#ffffff';
-    stamp = null;
-    select(btn);
-  });
-  toolButton('🗑️', 'clear', () => {
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    say('All clean!');
-  });
-
-  const ctx = canvas.getContext('2d');
-  function resize() {
-    // Keep the picture when the iPad rotates.
-    const keep = document.createElement('canvas');
-    keep.width = canvas.width;
-    keep.height = canvas.height;
-    if (canvas.width) keep.getContext('2d').drawImage(canvas, 0, 0);
-    const dpr = window.devicePixelRatio || 1;
-    const r = wrap.getBoundingClientRect();
-    canvas.width = Math.max(1, Math.round(r.width * dpr));
-    canvas.height = Math.max(1, Math.round(r.height * dpr));
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    if (keep.width) ctx.drawImage(keep, 0, 0, keep.width / dpr, keep.height / dpr);
-  }
-  resize();
-  const ro = new ResizeObserver(resize);
-  ro.observe(wrap);
-
-  const strokes = new Map();
-  const pos = (e) => {
-    const r = canvas.getBoundingClientRect();
-    return [e.clientX - r.left, e.clientY - r.top];
-  };
-  canvas.addEventListener('pointerdown', (e) => {
-    canvas.setPointerCapture(e.pointerId);
-    const [x, y] = pos(e);
-    if (stamp) {
-      ctx.font = `${size * 4}px serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(stamp, x, y);
-      sfx('pop');
-      return;
-    }
-    strokes.set(e.pointerId, [x, y]);
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(x, y, size / 2, 0, Math.PI * 2);
-    ctx.fill();
-  });
-  canvas.addEventListener('pointermove', (e) => {
-    const last = strokes.get(e.pointerId);
-    if (!last) return;
-    const [x, y] = pos(e);
-    ctx.strokeStyle = color;
-    ctx.lineWidth = size;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.beginPath();
-    ctx.moveTo(...last);
-    ctx.lineTo(x, y);
-    ctx.stroke();
-    strokes.set(e.pointerId, [x, y]);
-  });
-  const end = (e) => strokes.delete(e.pointerId);
-  canvas.addEventListener('pointerup', end);
-  canvas.addEventListener('pointercancel', end);
-
-  return () => {
-    ro.disconnect();
-    main.style.justifyContent = '';
-  };
 }
 
 // ---------- Bubble pop ----------
@@ -205,7 +130,7 @@ function bubbles() {
       if (!live.has(bubble)) return;
       live.delete(bubble);
       sfx('pop');
-      if (text) say(text, { rate: 0.95 });
+      if (text) say(text);
       b.style.transition = 'transform .15s, opacity .15s';
       b.style.transform += ' scale(1.4)';
       b.style.opacity = '0';
@@ -269,7 +194,7 @@ function memory() {
       card.textContent = animal.emoji;
       card.style.background = '#fff';
       sfx('tap');
-      say(animal.name, { rate: 1 });
+      say(animal.name);
       open.push({ card, animal });
       if (open.length < 2) return;
       const [a, b] = open;

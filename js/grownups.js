@@ -1,5 +1,17 @@
 // Grown-ups screen: manage heart words, back up / restore, and settings.
-import { topBar, randInt, getSettings, setSettings, resetStars, el } from './common.js';
+import {
+  topBar,
+  randInt,
+  getSettings,
+  setSettings,
+  resetStars,
+  el,
+  say,
+  KID,
+  listVoices,
+  setVoice,
+  currentVoiceURI,
+} from './common.js';
 import {
   getWords,
   getRemovedStarterWords,
@@ -12,6 +24,7 @@ import {
   exportData,
   importData,
 } from './words-store.js';
+import { countPictures, deleteAllPictures } from './gallery-store.js';
 
 const main = document.getElementById('app');
 main.style.justifyContent = 'flex-start';
@@ -147,7 +160,68 @@ async function manage() {
     settingsMsg.textContent = 'Scores reset.';
   });
 
-  main.append(addPanel, removedPanel, backupPanel, settingsPanel);
+  // ---- Voice ----
+  const voicePanel = el('section', 'panel');
+  voicePanel.innerHTML = `
+    <h2>🗣️ Voice</h2>
+    <p>For a much more natural voice, download a free Premium voice on the iPad:
+       <b>Settings → Accessibility → Spoken Content → Voices → English</b> (on newer iPads:
+       <b>Accessibility → Read &amp; Speak → Voices</b>). Pick <b>Ava</b> or <b>Zoe</b> and download the
+       <b>Premium</b> version, then reload this page. The best voice is picked automatically.</p>
+    <div class="row">
+      <select data-voice aria-label="Voice" style="font:inherit;font-size:18px;padding:10px;border-radius:12px;flex:1;min-width:220px"></select>
+      <button class="btn" data-test-voice>▶ Test</button>
+    </div>
+    <div class="row" style="margin-top:12px" role="radiogroup" aria-label="Speed">
+      Speed:
+      <label><input type="radio" name="speed" value="slower"> Slower</label>
+      <label><input type="radio" name="speed" value="normal"> Normal</label>
+      <label><input type="radio" name="speed" value="faster"> Faster</label>
+    </div>`;
+  const voiceSelect = voicePanel.querySelector('[data-voice]');
+  function fillVoices() {
+    const voices = listVoices();
+    voiceSelect.innerHTML = '';
+    if (!voices.length) voiceSelect.innerHTML = '<option value="">Default voice</option>';
+    for (const v of voices) voiceSelect.appendChild(new Option(v.label, v.uri));
+    voiceSelect.value = currentVoiceURI();
+  }
+  fillVoices();
+  // iPad loads its voice list a moment after the page opens.
+  speechSynthesis?.addEventListener?.('voiceschanged', fillVoices);
+  voiceSelect.addEventListener('change', () => {
+    setVoice(voiceSelect.value);
+    say(`Hi ${KID}! Let's play!`);
+  });
+  voicePanel.querySelector('[data-test-voice]').addEventListener('click', () => say(`Hi ${KID}! Let's play!`));
+  const speed = getSettings().speechRate || 'normal';
+  voicePanel.querySelectorAll('input[name=speed]').forEach((r) => {
+    r.checked = r.value === speed;
+    r.addEventListener('change', () => {
+      setSettings({ speechRate: r.value });
+      say(`Hi ${KID}! Let's play!`);
+    });
+  });
+
+  // ---- Pictures ----
+  const picturesPanel = el('section', 'panel');
+  picturesPanel.innerHTML = `
+    <h2>🖼️ Pictures</h2>
+    <p data-pictures></p>
+    <p>To save one to Photos: Free Play → My Pictures → tap a picture → press and hold it → Save to Photos.</p>
+    <button class="btn danger" data-delete-pictures>Delete all pictures</button>`;
+  async function showPictureCount() {
+    const n = await countPictures();
+    picturesPanel.querySelector('[data-pictures]').textContent = `${n} saved picture${n === 1 ? '' : 's'} on this iPad (newest 50 are kept).`;
+  }
+  showPictureCount();
+  picturesPanel.querySelector('[data-delete-pictures]').addEventListener('click', async () => {
+    if (!confirm('Delete all of Lydia’s saved pictures? This can’t be undone.')) return;
+    await deleteAllPictures();
+    showPictureCount();
+  });
+
+  main.append(addPanel, removedPanel, voicePanel, picturesPanel, backupPanel, settingsPanel);
 
   async function renderList() {
     const list = addPanel.querySelector('.words');

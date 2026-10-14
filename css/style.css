@@ -292,3 +292,98 @@ main {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
+
+/* ---------- Drawing ---------- */
+main.drawing { justify-content: flex-start; gap: 10px; max-width: none; padding-bottom: 12px; }
+.draw-tools {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.tool-btn {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  font-size: 28px;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.tool-btn:active { transform: translateY(3px); }
+.tool-btn.on { outline: 5px solid var(--ink); outline-offset: 2px; }
+.tool-btn.action { background: #f3ead9; }
+.tool-btn.big { width: 96px; height: 96px; font-size: 56px; border-radius: 28px; }
+.tool-btn .dot { display: block; border-radius: 50%; background: var(--ink); }
+.draw-area {
+  flex: 1;
+  width: 100%;
+  min-height: 300px;
+  border-radius: 28px;
+  background: #fff;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  position: relative;
+}
+.draw-area canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
+.draw-area canvas.lines { pointer-events: none; }
+
+/* ---------- Pop-up question / trays ---------- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(43, 45, 66, 0.35);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+.overlay-box {
+  background: var(--card);
+  border-radius: 36px;
+  box-shadow: var(--shadow);
+  padding: 24px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  max-width: 640px;
+  text-align: center;
+  animation: pop-in .25s ease;
+}
+.overlay-box .row { display: flex; gap: 28px; }
+.overlay-box .yes, .overlay-box .no { width: 110px; height: 110px; font-size: 56px; }
+.overlay-box .yes { background: #dff7e4; }
+.overlay-box .no { background: #fde2e2; }
+.tray-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; }
+
+/* ---------- My Pictures ---------- */
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+.gallery-item {
+  aspect-ratio: 4 / 3;
+  padding: 0;
+  border-radius: 20px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+.gallery-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+img.saveable {
+  max-width: 100%;
+  max-height: 62vh;
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  background: #fff;
+  /* Let a long-press bring up iOS's "Save to Photos" menu on this image only. */
+  -webkit-touch-callout: default;
+  -webkit-user-select: auto;
+  user-select: auto;
+}
+.round-btn.big-action { width: 100px; height: 100px; font-size: 48px; }
