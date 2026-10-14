@@ -48,9 +48,11 @@ export function sample(arr, n) {
 }
 
 // ---------- Speech ----------
-// iPads ship robotic "compact" voices by default; the free downloadable Enhanced/Premium voices
-// (Settings → Accessibility → Spoken Content → Voices) sound far more natural, so rank those first.
-const NATURAL = ['ava', 'zoe', 'evan', 'allison', 'susan', 'nicky', 'joelle', 'noelle', 'tom', 'samantha', 'aria', 'jenny'];
+// Natural voices come from the Piper text-to-speech container on the computer running the games
+// (Safari won't let web pages use the iPad's downloaded Premium voices). If that container isn't
+// reachable, we fall back to the iPad's built-in voices.
+const TTS_URL = new URL('../tts', import.meta.url);
+const NATURAL_PREFIX = 'piper:';
 const NOVELTY = [
   'albert', 'bad news', 'bahh', 'bells', 'boing', 'bubbles', 'cellos', 'good news', 'jester', 'organ',
   'superstar', 'trinoids', 'whisper', 'wobble', 'zarvox', 'fred', 'junior', 'ralph', 'kathy',
@@ -63,45 +65,70 @@ function voiceScore(v) {
   if (id.includes('eloquence') || NOVELTY.some((n) => name === n || name.startsWith(`${n} `))) return -1;
   let score = 0;
   if (id.includes('premium')) score += 100;
-  else if (id.includes('enhanced') || id.includes('natural') || id.includes('neural')) score += 60;
-  if (NATURAL.some((n) => name.includes(n))) score += 20;
+  else if (id.includes('enhanced')) score += 60;
+  if (name.includes('samantha')) score += 20;
   if (v.lang.replace('_', '-') === 'en-US') score += 10;
   if (v.localService) score += 5;
   return score;
 }
 
 export const SPEEDS = { slower: 0.85, normal: 0.95, faster: 1.05 };
+const speedKey = () => (SPEEDS[getSettings().speechRate] ? getSettings().speechRate : 'normal');
 
-// English voices worth offering, best first, with a friendly label.
-export function listVoices() {
+// iPad voices worth offering, best first, one entry per name + language.
+function ipadVoices() {
   if (!('speechSynthesis' in window)) return [];
+  const seen = new Set();
   return speechSynthesis
     .getVoices()
     .filter((v) => v.lang && v.lang.toLowerCase().startsWith('en'))
     .map((v) => ({ voice: v, score: voiceScore(v) }))
     .filter((x) => x.score >= 0)
     .sort((a, b) => b.score - a.score || a.voice.name.localeCompare(b.voice.name))
-    .map(({ voice: v }) => {
-      const id = `${v.name} ${v.voiceURI}`.toLowerCase();
-      const quality = id.includes('premium') ? 'Premium' : id.includes('enhanced') ? 'Enhanced' : '';
-      const label = v.name.includes('(') || !quality ? v.name : `${v.name} (${quality})`;
-      return { uri: v.voiceURI, label: `${label} · ${v.lang}`, voice: v };
-    });
+    .filter(({ voice: v }) => {
+      const key = `${v.name}|${v.lang}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map(({ voice: v }) => ({ uri: v.voiceURI, label: `${v.name} · ${v.lang}`, voice: v, natural: false }));
 }
 
-let voice = null;
+let naturalVoices = [];
+// Resolves once we know whether the natural-voice container is there.
+export const voicesReady = fetch(new URL('../tts/voices', import.meta.url), { cache: 'no-cache' })
+  .then((r) => (r.ok ? r.json() : []))
+  .then((list) => {
+    naturalVoices = (Array.isArray(list) ? list : []).map((v) => ({
+      uri: NATURAL_PREFIX + v.id,
+      label: v.label,
+      natural: true,
+      isDefault: v.default,
+    }));
+    naturalVoices.sort((a, b) => b.isDefault - a.isDefault);
+  })
+  .catch(() => {})
+  .then(() => {
+    chooseVoice();
+    prefetch([...CHEERS, ...TRY_AGAIN]);
+  });
+
+// Every voice to offer on the Grown-ups screen: natural voices first, then the iPad's own.
+export function listVoices() {
+  return [...naturalVoices, ...ipadVoices()];
+}
+
+let current = null; // { uri, voice?, natural }
 function chooseVoice() {
   const voices = listVoices();
   const saved = getSettings().voiceURI;
-  voice = voices.find((v) => v.uri === saved)?.voice || voices[0]?.voice || null;
+  current = voices.find((v) => v.uri === saved) || voices[0] || null;
 }
-if ('speechSynthesis' in window) {
-  chooseVoice();
-  speechSynthesis.addEventListener?.('voiceschanged', chooseVoice);
-}
+chooseVoice();
+if ('speechSynthesis' in window) speechSynthesis.addEventListener?.('voiceschanged', chooseVoice);
 
 export function currentVoiceURI() {
-  return voice?.voiceURI || '';
+  return current?.uri || '';
 }
 
 export function setVoice(uri) {
@@ -109,15 +136,80 @@ export function setVoice(uri) {
   chooseVoice();
 }
 
-// Speaks text and resolves when finished (or after a safety timeout, since iOS doesn't always fire onend).
-export function say(text) {
+// Decoded natural-voice clips, so repeated phrases ("Great job!") play instantly.
+const clips = new Map();
+const CLIP_LIMIT = 80;
+let playing = null;
+let speechId = 0;
+
+function clipKey(text, uri, speed) {
+  return `${uri}|${speed}|${text}`;
+}
+
+async function loadClip(text, uri, speed) {
+  const key = clipKey(text, uri, speed);
+  if (clips.has(key)) return clips.get(key);
+  const url = new URL(TTS_URL);
+  url.search = new URLSearchParams({ text, voice: uri.slice(NATURAL_PREFIX.length), speed });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000);
+  const promise = fetch(url, { signal: controller.signal })
+    .then((r) => {
+      if (!r.ok) throw new Error(`TTS ${r.status}`);
+      return r.arrayBuffer();
+    })
+    .then((buf) => new Promise((ok, fail) => ctx().decodeAudioData(buf, ok, fail)))
+    .finally(() => clearTimeout(timer));
+  clips.set(key, promise);
+  promise.catch(() => clips.delete(key));
+  if (clips.size > CLIP_LIMIT) clips.delete(clips.keys().next().value);
+  return promise;
+}
+
+// Warm the cache for phrases we're about to need (e.g. the praise for the current question).
+export function prefetch(texts) {
+  if (!current?.natural || !getSettings().speech || !ctx()) return;
+  for (const t of texts) if (t) loadClip(t, current.uri, speedKey()).catch(() => {});
+}
+
+export function stopSpeech() {
+  speechId++;
+  try {
+    playing?.stop();
+  } catch {
+    /* already stopped */
+  }
+  playing = null;
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+}
+
+function sayNatural(text, id) {
+  return loadClip(text, current.uri, speedKey()).then(
+    (buffer) =>
+      new Promise((resolve) => {
+        if (id !== speechId) return resolve(); // something newer started talking
+        const ac = ctx();
+        const src = ac.createBufferSource();
+        src.buffer = buffer;
+        src.connect(ac.destination);
+        src.onended = () => {
+          if (playing === src) playing = null;
+          resolve();
+        };
+        playing = src;
+        src.start();
+      }),
+  );
+}
+
+function sayIpad(text) {
   return new Promise((resolve) => {
-    if (!text || !getSettings().speech || !('speechSynthesis' in window)) return resolve();
-    speechSynthesis.cancel();
-    const rate = SPEEDS[getSettings().speechRate] || SPEEDS.normal;
+    if (!('speechSynthesis' in window)) return resolve();
+    const rate = SPEEDS[speedKey()];
+    const fallback = current?.natural ? ipadVoices()[0] : current;
     const u = new SpeechSynthesisUtterance(text);
-    if (voice) u.voice = voice;
-    u.lang = voice?.lang || 'en-US';
+    if (fallback?.voice) u.voice = fallback.voice;
+    u.lang = fallback?.voice?.lang || 'en-US';
     u.rate = rate;
     u.pitch = 1;
     const timer = setTimeout(resolve, 900 + (text.length * 100) / rate);
@@ -127,6 +219,18 @@ export function say(text) {
     };
     speechSynthesis.speak(u);
   });
+}
+
+// Speaks text and resolves when finished. Starting a new phrase stops the previous one.
+export function say(text) {
+  stopSpeech();
+  if (!text || !getSettings().speech) return Promise.resolve();
+  const id = speechId;
+  if (current?.natural && ctx()) {
+    // If the voice container is unreachable, say it with the iPad's voice instead.
+    return sayNatural(text, id).catch(() => (id === speechId ? sayIpad(text) : undefined));
+  }
+  return sayIpad(text);
 }
 
 // ---------- Sound effects (tiny Web Audio tones; nothing harsh) ----------
@@ -182,6 +286,8 @@ export function sfx(kind) {
 
 // iPad Safari only plays audio after a tap, so unlock both speech and Web Audio on the first touch.
 function unlock() {
+  // Let spoken words play through the speaker even when the iPad's silent switch is on.
+  if (navigator.audioSession) navigator.audioSession.type = 'playback';
   ctx();
   if ('speechSynthesis' in window && !speechSynthesis.speaking) {
     const u = new SpeechSynthesisUtterance(' ');
@@ -282,7 +388,7 @@ export function topBar({ title, home = '../index.html' }) {
   let repeatFn = null;
   const repeatBtn = bar.querySelector('[data-repeat]');
   bar.querySelector('[data-back]').addEventListener('click', () => {
-    speechSynthesis?.cancel();
+    stopSpeech();
     backFn();
   });
   repeatBtn.addEventListener('click', () => repeatFn && repeatFn());
@@ -304,7 +410,7 @@ export function topBar({ title, home = '../index.html' }) {
 // A screen of big emoji tiles to choose an activity. Each mode: { emoji, name, color, start() }.
 export function modePicker({ main, bar, title, intro, modes }) {
   function show() {
-    speechSynthesis?.cancel();
+    stopSpeech();
     bar.setTitle(title);
     bar.onBack(null);
     bar.onRepeat(intro ? () => say(intro) : null);
