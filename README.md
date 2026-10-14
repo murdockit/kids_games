@@ -29,15 +29,14 @@ Then on the iPad, open Safari and go to `http://<this-computer's-IP>:2021`. Tap 
 - **On the iPad:** tap **Grown-ups ⚙️** at the bottom of the home screen and answer the multiplication question. There you can add words (separate several with commas), remove words, mark words *Learned* (learned words come up less often), and see how many she has gotten right on the first try.
 - **Backup:** iPad changes are saved in Safari on that iPad. Use **Export words** to save a copy. The exported file has the same shape as `data/heart-words.json`, so you can drop it in as the new starter list. **Import words** restores a backup.
 
-## Make the voice sound natural
+## Natural voice
 
-The iPad's built-in "compact" voices sound robotic. Apple's free **Premium** voices sound much better, and the games pick them automatically:
+Safari only lets web pages use the iPad's basic built-in voices, which sound robotic. Voices you download in iPad Settings (like Ava Premium) are **not** available to websites. Instead, `docker compose` also runs a small **text-to-speech container** (`tts/`, using [Piper](https://github.com/OHF-Voice/piper1-gpl)) that makes natural-sounding speech on your computer, with no internet or account needed once it's built.
 
-1. On the iPad: **Settings → Accessibility → Spoken Content → Voices → English** (on newer iPads: **Accessibility → Read & Speak → Voices**).
-2. Pick **Ava** or **Zoe** and download the **Premium** version (a few hundred MB).
-3. Reload the games. To try voices or change the speed, go to **Grown-ups ⚙️ → Voice** and tap **▶ Test**.
-
-Siri voices can't be used by web pages.
+- Two voices are included: **Lessac** (clear, the default) and **Heather** (warmer). Choose one and the speed in **Grown-ups ⚙️ → Voice**, and tap **▶ Test** to hear it.
+- Each phrase is created once (about 0.1–0.2 s) and saved in the `tts-cache` volume. After that it plays instantly.
+- If the container isn't running, the games use the iPad's own voice automatically, and the Grown-ups screen shows a warning.
+- The image is about 680 MB: Python, the speech engine, and two voices.
 
 ## Saving drawings
 
@@ -60,6 +59,7 @@ js/quiz.js                  shared multiple-choice round runner
 js/words-store.js           heart words: starter file + this iPad's changes
 js/gallery-store.js         saved pictures (IndexedDB on the iPad)
 js/coloring-pages.js        coloring page line art
+tts/                        natural-voice container (Piper text-to-speech server)
 js/games/*.js               each game's logic
 css/style.css               shared styles (big tap targets, no zoom/selection)
 data/heart-words.json       starter heart words

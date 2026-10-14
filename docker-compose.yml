@@ -8,4 +8,18 @@ services:
     volumes:
       # Edit data/heart-words.json on this computer; the iPad sees it on the next page load.
       - ./data:/usr/share/nginx/html/data:ro
+    depends_on:
+      - tts
     restart: unless-stopped
+
+  # Natural-sounding voice (Piper, runs offline). Spoken phrases are cached in the tts-cache volume.
+  tts:
+    build: ./tts
+    image: lydias-games-tts
+    container_name: lydias-games-tts
+    volumes:
+      - tts-cache:/cache
+    restart: unless-stopped
+
+volumes:
+  tts-cache:

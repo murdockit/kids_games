@@ -11,6 +11,7 @@ import {
   listVoices,
   setVoice,
   currentVoiceURI,
+  voicesReady,
 } from './common.js';
 import {
   getWords,
@@ -164,10 +165,10 @@ async function manage() {
   const voicePanel = el('section', 'panel');
   voicePanel.innerHTML = `
     <h2>🗣️ Voice</h2>
-    <p>For a much more natural voice, download a free Premium voice on the iPad:
-       <b>Settings → Accessibility → Spoken Content → Voices → English</b> (on newer iPads:
-       <b>Accessibility → Read &amp; Speak → Voices</b>). Pick <b>Ava</b> or <b>Zoe</b> and download the
-       <b>Premium</b> version, then reload this page. The best voice is picked automatically.</p>
+    <p>The <b>natural voices</b> come from the computer running the games, so they sound the same on
+       every device. If that computer's voice service isn't running, the iPad's own voices are used
+       instead (Safari can't use voices downloaded in iPad Settings).</p>
+    <p data-voice-status></p>
     <div class="row">
       <select data-voice aria-label="Voice" style="font:inherit;font-size:18px;padding:10px;border-radius:12px;flex:1;min-width:220px"></select>
       <button class="btn" data-test-voice>▶ Test</button>
@@ -183,10 +184,21 @@ async function manage() {
     const voices = listVoices();
     voiceSelect.innerHTML = '';
     if (!voices.length) voiceSelect.innerHTML = '<option value="">Default voice</option>';
-    for (const v of voices) voiceSelect.appendChild(new Option(v.label, v.uri));
+    for (const [natural, title] of [[true, 'Natural voices'], [false, 'iPad voices']]) {
+      const group = voices.filter((v) => v.natural === natural);
+      if (!group.length) continue;
+      const og = document.createElement('optgroup');
+      og.label = title;
+      for (const v of group) og.appendChild(new Option(v.label, v.uri));
+      voiceSelect.appendChild(og);
+    }
     voiceSelect.value = currentVoiceURI();
+    voicePanel.querySelector('[data-voice-status]').textContent = voices.some((v) => v.natural)
+      ? '✅ Natural voice service is running.'
+      : '⚠️ Natural voice service not found — using iPad voices. Check that the "tts" container is running.';
   }
   fillVoices();
+  voicesReady.then(fillVoices);
   // iPad loads its voice list a moment after the page opens.
   speechSynthesis?.addEventListener?.('voiceschanged', fillVoices);
   voiceSelect.addEventListener('change', () => {

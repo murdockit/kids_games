@@ -9,7 +9,7 @@
 //     praise: 'The!' }                   // optional thing to say when right (instead of a random cheer)
 //
 // Wrong taps wiggle and let her try again; no timers, no losing.
-import { cheer, tryAgain, say, doneScreen, sfx, shuffle } from './common.js';
+import { cheer, tryAgain, say, doneScreen, sfx, shuffle, prefetch } from './common.js';
 
 export function runQuiz({ main, bar, count = 6, makeQuestion, onAnswer, onFinish, onExit }) {
   let index = 0;
@@ -59,6 +59,7 @@ export function runQuiz({ main, bar, count = 6, makeQuestion, onAnswer, onFinish
     main.append(progress, prompt, choices);
     bar.onRepeat(() => say(current.say));
     say(current.say);
+    prefetch([current.praise]);
   }
 
   let busy = false;
