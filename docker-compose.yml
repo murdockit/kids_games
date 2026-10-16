@@ -5,11 +5,17 @@ services:
     container_name: lydias-games
     ports:
       - "2021:80"
+      # Secure address, for the microphone. See "Secure address" in the README.
+      - "2022:443"
     volumes:
       # Edit data/heart-words.json on this computer; the iPad sees it on the next page load.
       - ./data:/usr/share/nginx/html/data:ro
+      - certs:/certs:ro
     depends_on:
-      - tts
+      tts:
+        condition: service_started
+      save:
+        condition: service_started  # nginx waits briefly for its certificates, then starts anyway
     restart: unless-stopped
 
   # Natural-sounding voice (Piper, runs offline). Spoken phrases are cached in the tts-cache volume.
@@ -21,5 +27,23 @@ services:
       - tts-cache:/cache
     restart: unless-stopped
 
+  # Backs up her progress and pictures to this computer, and makes the https certificates.
+  save:
+    build: ./save
+    image: lydias-games-save
+    container_name: lydias-games-save
+    environment:
+      # This computer's address(es) as the iPad sees them, comma-separated,
+      # e.g. "192.168.1.50,my-pc.local". Used for the https certificate.
+      HOST_NAMES: ${HOST_NAMES:-}
+    volumes:
+      - save-data:/data
+      - ca:/ca
+      - certs:/certs
+    restart: unless-stopped
+
 volumes:
   tts-cache:
+  save-data:
+  ca:
+  certs:

@@ -1,8 +1,13 @@
-// Free Play: no wrong answers. Drawing pad, my saved pictures, bubble pop, and animal memory match.
-import { topBar, modePicker, pick, shuffle, say, sfx, cheer, doneScreen, el, randInt, askYesNo } from '../common.js';
+// Free Play: no wrong answers. Drawing, saved pictures, bubbles, memory match, music, puzzles,
+// dot-to-dot and mazes.
+import { topBar, modePicker, pick, shuffle, say, sfx, cheer, doneScreen, el, randInt, askYesNo, KID } from '../common.js';
 import { getWords } from '../words-store.js';
 import { draw } from './draw.js';
 import { listPictures, deletePicture } from '../gallery-store.js';
+import { musicMaker } from './music-maker.js';
+import { puzzles } from './puzzle.js';
+import { dotToDot } from './dots.js';
+import { mazes } from './maze.js';
 
 const main = document.getElementById('app');
 const bar = topBar({ title: 'Free Play' });
@@ -23,6 +28,10 @@ const showPicker = modePicker({
     { emoji: '🖼️', name: 'My Pictures', color: 'orange', start: () => run(pictures) },
     { emoji: '🫧', name: 'Bubble Pop', color: 'blue', start: () => run(bubbles) },
     { emoji: '🐘', name: 'Memory Match', color: 'green', start: () => run(memory) },
+    { emoji: '🎹', name: 'Music Maker', color: 'yellow', start: () => run(() => musicMaker({ main, bar })) },
+    { emoji: '🧩', name: 'Puzzles', color: 'teal', start: () => run(() => puzzles({ main, bar })) },
+    { emoji: '✏️', name: 'Dot to Dot', color: 'purple', start: () => run(() => dotToDot({ main, bar, exit: showPicker })) },
+    { emoji: '🌀', name: 'Mazes', color: 'blue', start: () => run(() => mazes({ main, bar, exit: showPicker })) },
   ],
 });
 
@@ -70,7 +79,7 @@ function preview(pic) {
   main.innerHTML = '';
   const img = el('img', 'saveable');
   img.src = pic.image;
-  img.alt = 'Lydia\'s picture';
+  img.alt = `${KID}'s picture`;
   const hint = el('p', 'note', 'Grown-ups: press and hold the picture to save it to Photos.');
   const row = el('div', 'choices');
   const edit = el('button', 'round-btn big-action', '✏️');

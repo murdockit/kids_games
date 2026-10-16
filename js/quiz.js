@@ -12,7 +12,8 @@
 import { cheer, tryAgain, say, doneScreen, sfx, shuffle, prefetch } from './common.js';
 import { logRound, logAnswer, currentGame } from './activity.js';
 
-export function runQuiz({ main, bar, count = 6, makeQuestion, onAnswer, onFinish, onExit }) {
+// onComplete (optional) replaces the end-of-round celebration, e.g. for the Daily Adventure.
+export function runQuiz({ main, bar, count = 6, makeQuestion, onAnswer, onFinish, onExit, onComplete }) {
   let index = 0;
   let current = null;
   let firstTry = true;
@@ -112,6 +113,11 @@ export function runQuiz({ main, bar, count = 6, makeQuestion, onAnswer, onFinish
     if (index >= count) {
       logRound(currentGame());
       onFinish?.();
+      if (onComplete) {
+        bar.onRepeat(null);
+        onComplete();
+        return;
+      }
       doneScreen(main, {
         onAgain: () => {
           sfx('tap');
