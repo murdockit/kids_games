@@ -8,7 +8,7 @@ Simple learning games for a kindergartner, made for an iPad. Plain HTML/CSS/Java
 | 🔤 Letters | Find the letter you hear · Big & little letters · First sounds (which picture starts with B?) |
 | 🔢 Counting | How many? (tap to count out loud) · Which has more or fewer? · Add & take away within 10 |
 | 🔺 Shapes & Colors | Find the shape or color · What comes next? (patterns) · Sort into baskets |
-| 💇 Hair Salon | Pick a friend (Mia, Leo, Zuzu the monster, Kiki the cat, Grandpa Bob, Bella), then cut, comb, grow, color (even rainbow), curl, straighten, shampoo, rinse and blow-dry their bendy hair. Add stickers and take a photo for My Pictures |
+| 💇 Hair Salon | Pick a friend (Mia, Leo, Zuzu the monster, Kiki the cat, Grandpa Bob, Bella), then cut, comb, grow, color (even rainbow), curl, straighten, shampoo, rinse and blow-dry their bendy hair. Dress them in 13 outfits (any of 12 colors), try on hats and glasses that fit their head, add stickers and take a photo for My Pictures |
 | 🎨 Free Play | Drawing pad: 35 coloring pages in 5 groups, 28 named colors, paint bucket with magic patterns (rainbow, dots, stripes, glitter, hearts), brushes, stamps, undo, save · My Pictures · Bubble pop · Animal memory match |
 
 Every instruction is spoken, and 🔊 repeats it, so she doesn't need to read to play. There are no timers and no way to lose: a wrong tap wiggles and she tries again. Each round finishes with a cheer and a ⭐.
@@ -61,7 +61,8 @@ js/words-store.js           heart words: starter file + this iPad's changes
 js/gallery-store.js         saved pictures (IndexedDB on the iPad)
 js/coloring-pages.js        coloring page line art (add a picture: one SVG entry, white-filled shapes)
 tts/                        natural-voice container (Piper text-to-speech server)
-js/games/*.js               each game's logic (salon.js: hair strands are simple physics chains)
+js/games/*.js               each game's logic (salon.js: hair strands are simple physics chains;
+                            salon-wardrobe.js: clothes, hats and glasses drawn to fit the friend)
 css/style.css               shared styles (big tap targets, no zoom/selection)
 data/heart-words.json       starter heart words
 ```
