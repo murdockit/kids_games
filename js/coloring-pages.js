@@ -479,6 +479,96 @@ export const PAGES = [
       <circle cx="110" cy="320" r="10"/><circle cx="160" cy="320" r="10"/><circle cx="200" cy="320" r="10"/>
       <circle cx="240" cy="320" r="10"/><circle cx="290" cy="320" r="10"/>`),
   },
+
+  // ---------- Bonus pages (unlocked with stars; see js/rewards.js) ----------
+  {
+    id: 'sparkle', cat: 'fun', bonus: true, name: 'Sparkle the unicorn', emoji: '🦄',
+    svg: wrap(`
+      <g transform="translate(8 40) scale(1.72)" stroke-width="4.5">
+        <path d="M52 128 C20 120 14 150 30 168 C18 170 20 190 40 186 C50 176 62 150 58 132 Z"/>
+        <path d="M50 134 C30 132 28 152 38 162 C44 156 54 146 52 136 Z"/>
+        <rect x="68" y="150" width="20" height="42" rx="9"/><rect x="128" y="150" width="20" height="42" rx="9"/>
+        <rect x="66" y="182" width="24" height="14" rx="6"/><rect x="126" y="182" width="24" height="14" rx="6"/>
+        <ellipse cx="106" cy="140" rx="62" ry="38"/>
+        <rect x="90" y="150" width="18" height="38" rx="8"/><rect x="146" y="148" width="18" height="40" rx="8"/>
+        <rect x="88" y="180" width="22" height="13" rx="6"/><rect x="144" y="180" width="22" height="13" rx="6"/>
+        <path d="M118 120 C112 100 118 82 132 76 L160 112 Z"/>
+        <circle cx="112" cy="58" r="16"/><circle cx="104" cy="78" r="15"/><circle cx="104" cy="98" r="14"/><circle cx="110" cy="116" r="12"/>
+        <polygon points="126,50 132,22 146,46"/>
+        <ellipse cx="148" cy="78" rx="36" ry="32"/>
+        <polygon points="150,48 168,4 172,50"/>
+        <path ${N} d="M155 38 L170 32 M158 28 L169 22"/>
+        <circle cx="124" cy="56" r="13"/>
+        <ellipse cx="170" cy="96" rx="26" ry="18"/>
+        <circle cx="165" cy="94" r="2.5"/><circle cx="180" cy="94" r="2.5"/>
+        <path ${N} d="M160 104 Q170 112 182 104"/>
+        <ellipse cx="146" cy="74" rx="7" ry="10"/>
+      </g>
+      ${star(345, 60, 26)}${star(60, 70, 20)}${star(350, 330, 18)}`),
+  },
+  {
+    id: 'mermaid', cat: 'fun', bonus: true, name: 'the mermaid', emoji: '🧜',
+    svg: wrap(
+      `
+      <path d="M138 95 C112 180 122 245 150 268 L250 268 C278 245 288 180 262 95 Z"/>
+      <path d="M250 328 C270 292 322 298 334 316 C312 322 292 332 272 342 C302 348 322 368 316 388 C290 378 266 362 250 338 Z"/>
+      <path d="M163 238 C156 300 198 334 258 334 C232 300 236 268 237 238 Z"/>
+      <g clip-path="url(#tail)"><path ${N} d="M160 260 q12 12 24 0 q12 12 24 0 q12 12 24 0 M165 285 q12 12 24 0 q12 12 24 0 q12 12 24 0 M185 310 q12 12 24 0 q12 12 24 0"/></g>
+      <ellipse cx="148" cy="210" rx="14" ry="40" transform="rotate(20 148 210)"/>
+      <ellipse cx="252" cy="210" rx="14" ry="40" transform="rotate(-20 252 210)"/>
+      <path d="M165 240 C160 200 170 172 200 166 C230 172 240 200 235 240 Z"/>
+      <circle cx="184" cy="200" r="15"/><circle cx="216" cy="200" r="15"/>
+      <circle cx="200" cy="112" r="50"/>
+      <path d="M150 108 C160 66 240 66 250 108 C232 92 216 96 200 102 C184 96 168 92 150 108 Z"/>
+      ${star(245, 76, 18)}
+      <circle cx="182" cy="118" r="7"/><circle cx="218" cy="118" r="7"/>
+      <path ${N} d="M184 140 q16 14 32 0"/>
+      <circle cx="80" cy="120" r="14"/><circle cx="60" cy="80" r="10"/><circle cx="330" cy="150" r="12"/><circle cx="345" cy="110" r="8"/>`,
+      `<defs><clipPath id="tail"><path d="M163 238 C156 300 198 334 258 334 C232 300 236 268 237 238 Z"/></clipPath></defs>`,
+    ),
+  },
+  {
+    id: 'dragon', cat: 'fun', bonus: true, name: 'the friendly dragon', emoji: '🐉',
+    svg: wrap(
+      `
+      <path d="M255 205 L340 115 L330 170 L375 160 L338 220 Z"/>
+      <path d="M290 310 C352 330 372 290 378 250 L396 272 L388 240 L362 250 C356 292 332 302 296 290 Z"/>
+      ${[[230, 178], [262, 188], [290, 205], [312, 228]].map(([x, y]) => `<polygon points="${x - 14},${y + 8} ${x},${y - 18} ${x + 14},${y + 8}"/>`).join('')}
+      <ellipse cx="215" cy="265" rx="100" ry="88"/>
+      <ellipse cx="210" cy="285" rx="56" ry="62"/>
+      <g clip-path="url(#belly)"><path ${N} d="M150 250 H270 M150 280 H270 M150 310 H270"/></g>
+      <ellipse cx="160" cy="352" rx="34" ry="16"/><ellipse cx="265" cy="352" rx="34" ry="16"/>
+      <polygon points="150,90 160,45 180,85"/><polygon points="195,85 215,42 222,88"/>
+      <ellipse cx="180" cy="125" rx="66" ry="56"/>
+      <ellipse cx="118" cy="142" rx="38" ry="30"/>
+      <circle cx="106" cy="136" r="4"/><circle cx="124" cy="132" r="4"/>
+      <circle cx="190" cy="112" r="15"/><circle cx="194" cy="108" r="5"/>
+      <path ${N} d="M100 156 q20 14 42 4"/>
+      <circle cx="68" cy="110" r="12"/><circle cx="48" cy="90" r="9"/><circle cx="36" cy="66" r="6"/>`,
+      `<defs><clipPath id="belly"><ellipse cx="210" cy="285" rx="56" ry="62"/></clipPath></defs>`,
+    ),
+  },
+  {
+    id: 'fairy', cat: 'fun', bonus: true, name: 'the fairy', emoji: '🧚',
+    svg: wrap(`
+      <ellipse cx="140" cy="175" rx="62" ry="40" transform="rotate(-30 140 175)"/>
+      <ellipse cx="260" cy="175" rx="62" ry="40" transform="rotate(30 260 175)"/>
+      <ellipse cx="150" cy="245" rx="44" ry="28" transform="rotate(25 150 245)"/>
+      <ellipse cx="250" cy="245" rx="44" ry="28" transform="rotate(-25 250 245)"/>
+      <rect x="180" y="300" width="14" height="60" rx="6"/><rect x="206" y="300" width="14" height="60" rx="6"/>
+      <ellipse cx="183" cy="362" rx="18" ry="10"/><ellipse cx="217" cy="362" rx="18" ry="10"/>
+      <path ${N} d="M178 190 L140 240 M222 190 L268 168"/>
+      <path ${N} d="M268 168 L300 120"/>
+      ${star(305, 110, 22)}
+      <path d="M178 170 L222 170 L262 315 Q248 300 232 316 Q216 300 200 316 Q184 300 168 316 Q152 300 138 315 Z"/>
+      <circle cx="200" cy="110" r="56"/>
+      <circle cx="200" cy="118" r="42"/>
+      <path d="M158 112 C166 80 234 80 242 112 C226 98 214 102 200 106 C186 102 174 98 158 112 Z"/>
+      <polygon points="182,72 190,52 200,68 210,52 218,72"/>
+      <circle cx="186" cy="122" r="6"/><circle cx="214" cy="122" r="6"/>
+      <path ${N} d="M188 140 q12 10 24 0"/>
+      ${star(80, 330, 14)}${star(330, 300, 12)}${star(70, 90, 12)}`),
+  },
 ];
 
 export function findPage(id) {

@@ -3,6 +3,10 @@
 import { say, sfx, el, askYesNo, confetti, addStar, pick } from '../common.js';
 import { PAGES, CATEGORIES, findPage, pageImage, pageURL } from '../coloring-pages.js';
 import { savePicture } from '../gallery-store.js';
+import { hasBonus, unlockedStickers } from '../rewards.js';
+
+// Pages she can pick: everything, plus bonus pages once she's unlocked them with stars.
+const available = () => PAGES.filter((p) => !p.bonus || hasBonus('page', p.id));
 
 // Named so picking one can say it out loud ("Light blue!").
 const COLORS = [
@@ -23,7 +27,9 @@ const PATTERNS = [
   { id: 'glitter', name: 'Glitter' },
   { id: 'hearts', name: 'Hearts' },
 ];
-const STAMPS = ['⭐', '❤️', '🌸', '🐶', '🐱', '🦋', '🌈', '🍎', '🚀', '🦄'];
+const BASE_STAMPS = ['⭐', '❤️', '🌸', '🐶', '🐱', '🦋', '🌈', '🍎', '🚀', '🦄'];
+// Stickers she's collected in her sticker book become stamps too.
+const STAMPS = [...new Set([...BASE_STAMPS, ...unlockedStickers().map((s) => s.emoji)])];
 const SIZES = [8, 16, 32];
 const UNDO_LIMIT = 10; // full-canvas snapshots are big; keep iPad memory in check
 const FILL_TOLERANCE = 48;
@@ -328,7 +334,7 @@ export function draw({ main, bar, resume = null }) {
     function showCategory(catId) {
       tabs.querySelectorAll('[data-cat]').forEach((t) => t.classList.toggle('on', t.dataset.cat === catId));
       grid.innerHTML = '';
-      for (const page of PAGES.filter((p) => p.cat === catId)) {
+      for (const page of available().filter((p) => p.cat === catId)) {
         const b = el('button', 'page-thumb');
         b.setAttribute('aria-label', page.name.replace('the ', ''));
         const img = el('img');
@@ -353,12 +359,22 @@ export function draw({ main, bar, resume = null }) {
     }
     const surprise = el('button', 'tool-btn big', '🎲');
     surprise.setAttribute('aria-label', 'surprise me');
-    surprise.addEventListener('click', () => choose(pick(PAGES.filter((p) => p.id !== pageId)).id));
+    surprise.addEventListener('click', () => choose(pick(available().filter((p) => p.id !== pageId)).id));
     const blank = el('button', 'tool-btn big', '⬜');
     blank.setAttribute('aria-label', 'blank page');
     blank.addEventListener('click', () => choose(null));
     tabs.append(surprise, blank);
     showCategory(findPage(pageId)?.cat || CATEGORIES[0].id);
+  }
+
+  // A quick paint-splash ripple where the bucket was tapped.
+  function splatRing(x, y, col) {
+    const ring = el('div', 'splat');
+    ring.style.left = `${x}px`;
+    ring.style.top = `${y}px`;
+    ring.style.borderColor = col;
+    document.body.appendChild(ring);
+    setTimeout(() => ring.remove(), 600);
   }
 
   // ---------- Painting ----------
@@ -419,7 +435,10 @@ export function draw({ main, bar, resume = null }) {
     if (tool === 'fill' || tool === 'magic') {
       const how = tool === 'magic' ? pattern : 'solid';
       if (!floodFill(Math.floor(x * dpr()), Math.floor(y * dpr()), color, how)) undo.pop();
-      else sfx(how === 'solid' ? 'pop' : 'good');
+      else {
+        sfx(how === 'solid' ? 'splat' : 'good');
+        splatRing(e.clientX, e.clientY, how === 'solid' ? color : '#facc15');
+      }
       return;
     }
     if (tool === 'stamp') {

@@ -1,6 +1,12 @@
 // Letters & Sounds: hear-and-tap letters, big/little match, beginning sounds.
 import { topBar, modePicker, pick, sample, shuffle } from '../common.js';
 import { runQuiz } from '../quiz.js';
+import { logMix } from '../activity.js';
+
+// Remember which letters she mixes up (e.g. b and d) for the Grown-ups progress page.
+const noteMix = (q, right, firstTry, choice) => {
+  if (!right) logMix('letters', q.answer, choice.value);
+};
 
 const main = document.getElementById('app');
 const bar = topBar({ title: 'Letters' });
@@ -68,6 +74,7 @@ function findLetter() {
         praise: `Yes! That's ${letterName(letter)}!`,
       };
     },
+    onAnswer: noteMix,
     onExit: showPicker,
   });
 }
@@ -94,6 +101,7 @@ function bigLittle() {
         praise: `Yes! Big ${letterName(letter)}, little ${letterName(letter)}!`,
       };
     },
+    onAnswer: noteMix,
     onExit: showPicker,
   });
 }

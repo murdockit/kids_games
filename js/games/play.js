@@ -78,7 +78,17 @@ function preview(pic) {
   const del = el('button', 'round-btn big-action', '🗑️');
   del.setAttribute('aria-label', 'Delete picture');
   row.append(edit, del);
-  main.append(img, hint, row);
+  // A frame that twinkles with glitter, like a picture on the fridge.
+  const frame = el('div', 'glitter-frame');
+  frame.appendChild(img);
+  for (let i = 0; i < 14; i++) {
+    const g = el('span', 'glint', pick(['✨', '⭐', '💫']));
+    g.style.left = `${(i * 37) % 100}%`;
+    g.style.top = `${(i * 53) % 100}%`;
+    g.style.animationDelay = `${(i % 7) * 0.35}s`;
+    frame.appendChild(g);
+  }
+  main.append(frame, hint, row);
   edit.addEventListener('click', () => {
     sfx('tap');
     bar.setTitle('Draw');
