@@ -27,6 +27,10 @@ export const OUTFITS = [
   { id: 'jersey', name: 'Sports jersey', color: '#f97316' },
   { id: 'rainbow', name: 'Rainbow shirt' },
   { id: 'pjs', name: 'Star pajamas', color: '#1e3a8a' },
+  // Bonus outfits, unlocked with stars (js/rewards.js)
+  { id: 'fairy', name: 'Fairy dress', color: '#a7f3d0', bonus: true },
+  { id: 'astronaut', name: 'Astronaut suit', color: '#e5e7eb', bonus: true },
+  { id: 'onesie', name: 'Unicorn onesie', color: '#fbcfe8', bonus: true },
 ];
 
 function shade(hex, t) {
@@ -116,6 +120,31 @@ export function drawOutfit(g, friend, outfit) {
     g.lineWidth = 5;
     g.strokeStyle = INK;
     g.stroke();
+  }
+  if (id === 'fairy') {
+    // Wings behind the shoulders
+    for (const sgn of [-1, 1]) {
+      g.beginPath();
+      g.ellipse(300 + sgn * 175, 560, 80, 50, sgn * -0.5, 0, Math.PI * 2);
+      g.fillStyle = 'rgba(186, 230, 253, 0.85)';
+      g.fill();
+      g.lineWidth = 4;
+      g.strokeStyle = INK;
+      g.stroke();
+    }
+  }
+  if (id === 'onesie') {
+    // Unicorn hood behind the head, with ears and a horn on top
+    g.beginPath();
+    g.ellipse(300, 330, 160, 185, 0, 0, Math.PI * 2);
+    g.fillStyle = c;
+    g.fill();
+    g.lineWidth = 5;
+    g.strokeStyle = INK;
+    g.stroke();
+    poly(g, [[285, 150], [300, 60], [315, 150]], '#fcd34d', INK, 5);
+    poly(g, [[180, 190], [175, 125], [225, 160]], c, INK, 5);
+    poly(g, [[420, 190], [425, 125], [375, 160]], c, INK, 5);
   }
   if (id === 'super') {
     // Cape peeking out at the shoulders
@@ -222,6 +251,26 @@ export function drawOutfit(g, friend, outfit) {
       star(g, 300, 618, 44, c, INK);
       g.fillStyle = INK;
       g.fillRect(0, 690, 600, 20);
+      break;
+    case 'fairy':
+      for (let i = 0; i < 22; i++) star(g, 110 + ((i * 89) % 380), 545 + ((i * 47) % 150), 6, '#fde68a');
+      break;
+    case 'astronaut':
+      g.fillStyle = '#cbd5e1';
+      g.fillRect(0, 680, 600, 30);
+      g.beginPath();
+      g.roundRect ? g.roundRect(330, 580, 90, 60, 8) : g.rect(330, 580, 90, 60);
+      g.fillStyle = '#94a3b8';
+      g.fill();
+      g.lineWidth = 4;
+      g.strokeStyle = INK;
+      g.stroke();
+      for (const [x, col] of [[350, '#ef4444'], [375, '#22c55e'], [400, '#3b82f6']]) circle(g, x, 610, 7, col, INK, 2);
+      circle(g, 215, 600, 26, '#3b82f6', INK, 4);
+      star(g, 215, 601, 15, '#fff');
+      break;
+    case 'onesie':
+      for (let i = 0; i < 12; i++) circle(g, 120 + ((i * 71) % 360), 560 + ((i * 37) % 130), 7, i % 2 ? '#c4b5fd' : '#fff', null);
       break;
     case 'jersey':
       g.fillStyle = '#fff';
@@ -401,6 +450,29 @@ const HATS = {
   bow(g, y) {
     bow(g, 375, y + 30, 1.8, '#ec4899');
   },
+  wizard(g, y) {
+    g.beginPath();
+    g.ellipse(300, y + 6, 130, 22, 0, 0, Math.PI * 2);
+    g.fillStyle = '#6d28d9';
+    g.fill();
+    g.lineWidth = 5;
+    g.strokeStyle = INK;
+    g.stroke();
+    poly(g, [[230, y + 2], [320, y - 170], [370, y + 2]], '#7c3aed', INK, 5);
+    star(g, 290, y - 50, 14, '#fde047');
+    star(g, 325, y - 100, 10, '#fde047');
+    circle(g, 270, y - 20, 5, '#fde047', null);
+  },
+  chef(g, y) {
+    g.fillStyle = '#fff';
+    g.fillRect(225, y - 40, 150, 48);
+    g.lineWidth = 5;
+    g.strokeStyle = INK;
+    g.strokeRect(225, y - 40, 150, 48);
+    for (const [x, yy, r] of [[245, -70, 38], [300, -95, 46], [355, -70, 38]]) circle(g, x, y + yy, r, '#fff', INK, 5);
+    g.fillStyle = '#fff';
+    g.fillRect(229, y - 62, 142, 26);
+  },
   bunny(g, y) {
     for (const sgn of [-1, 1]) {
       g.save();
@@ -494,6 +566,11 @@ const GLASSES = {
   hearts: (g, f) => glasses(g, f, 'heart', '#db2777', 'rgba(244,114,182,0.55)'),
   round: (g, f) => glasses(g, f, 'round', '#92400e', 'rgba(255,255,255,0.15)'),
   stars: (g, f) => glasses(g, f, 'star', '#ca8a04', 'rgba(250,204,21,0.45)'),
+  rainbow: (g, f) => {
+    const grad = g.createLinearGradient(160, 0, 440, 0);
+    ['#ef4444', '#f97316', '#facc15', '#22c55e', '#3b82f6', '#a855f7'].forEach((c, i) => grad.addColorStop(i / 5, c));
+    glasses(g, f, 'round', grad, 'rgba(255,255,255,0.2)');
+  },
 };
 
 export const WEARABLES = [
@@ -509,6 +586,10 @@ export const WEARABLES = [
   { id: 'hearts', slot: 'eyes', name: 'Heart glasses' },
   { id: 'round', slot: 'eyes', name: 'Round glasses' },
   { id: 'stars', slot: 'eyes', name: 'Star glasses' },
+  // Bonus items, unlocked with stars (js/rewards.js)
+  { id: 'wizard', slot: 'head', name: 'Wizard hat', bonus: true },
+  { id: 'chef', slot: 'head', name: 'Chef hat', bonus: true },
+  { id: 'rainbow', slot: 'eyes', name: 'Rainbow glasses', bonus: true },
 ];
 
 export function drawGlasses(g, friend, wear) {

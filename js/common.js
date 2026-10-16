@@ -1,4 +1,6 @@
 // Shared helpers for Lydia's Games: speech, sounds, cheers, stars, storage, page chrome.
+import { earnedStar, takeNewRewards } from './rewards.js';
+import { setTrack, startMusic, duck, preload } from './music.js';
 
 export const KID = 'Lydia';
 
@@ -226,11 +228,14 @@ export function say(text) {
   stopSpeech();
   if (!text || !getSettings().speech) return Promise.resolve();
   const id = speechId;
-  if (current?.natural && ctx()) {
-    // If the voice container is unreachable, say it with the iPad's voice instead.
-    return sayNatural(text, id).catch(() => (id === speechId ? sayIpad(text) : undefined));
-  }
-  return sayIpad(text);
+  duck(true); // music dips while someone is talking
+  const done = current?.natural && ctx()
+    ? // If the voice container is unreachable, say it with the iPad's voice instead.
+      sayNatural(text, id).catch(() => (id === speechId ? sayIpad(text) : undefined))
+    : sayIpad(text);
+  return done.finally(() => {
+    if (id === speechId) duck(false);
+  });
 }
 
 // ---------- Sound effects (tiny Web Audio tones; nothing harsh) ----------
@@ -253,6 +258,50 @@ function tone(freq, start, dur, type = 'sine', gain = 0.18) {
   const g = ac.createGain();
   osc.type = type;
   osc.frequency.setValueAtTime(freq, t);
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(gain, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  osc.connect(g).connect(ac.destination);
+  osc.start(t);
+  osc.stop(t + dur + 0.05);
+}
+
+// Each game has its own "that's right!" sound.
+function goodSound() {
+  const game = location.pathname.split('/').pop().replace(/\.html$/, '');
+  switch (game) {
+    case 'letters': // xylophone
+      tone(784, 0, 0.25, 'sine', 0.2);
+      tone(1175, 0.09, 0.35, 'sine', 0.18);
+      tone(3136, 0, 0.05, 'sine', 0.05);
+      break;
+    case 'counting': // coin
+      tone(988, 0, 0.08, 'square', 0.06);
+      tone(1319, 0.08, 0.3, 'square', 0.06);
+      break;
+    case 'heart-words': // harp
+      [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.05, 0.4, 'triangle', 0.12));
+      break;
+    case 'shapes': // marimba
+      tone(523, 0, 0.18, 'sine', 0.22);
+      tone(784, 0.1, 0.25, 'sine', 0.2);
+      break;
+    default:
+      tone(660, 0, 0.18);
+      tone(880, 0.1, 0.25);
+  }
+}
+
+// A tone that glides from one pitch to another (boing, whee).
+function slide(from, to, start, dur, type = 'sine', gain = 0.15) {
+  const ac = ctx();
+  if (!ac) return;
+  const t = ac.currentTime + start;
+  const osc = ac.createOscillator();
+  const g = ac.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(from, t);
+  osc.frequency.exponentialRampToValueAtTime(to, t + dur * 0.7);
   g.gain.setValueAtTime(0, t);
   g.gain.linearRampToValueAtTime(gain, t + 0.02);
   g.gain.exponentialRampToValueAtTime(0.001, t + dur);
@@ -311,8 +360,16 @@ export function sfx(kind) {
       noise(0.09, 0.06, { type: 'highpass', freq: 2000, gain: 0.25 });
       break;
     case 'good':
-      tone(660, 0, 0.18);
-      tone(880, 0.1, 0.25);
+      goodSound();
+      navigator.vibrate?.(25); // a tiny buzz where the device supports it (most iPads don't)
+      break;
+    case 'clink':
+      tone(1568, 0, 0.12, 'triangle', 0.12);
+      tone(2093, 0.06, 0.25, 'triangle', 0.1);
+      break;
+    case 'splat':
+      noise(0, 0.18, { type: 'lowpass', freq: 700, gain: 0.25 });
+      slide(300, 120, 0, 0.18, 'sine', 0.12);
       break;
     case 'oops':
       tone(330, 0, 0.18, 'triangle', 0.14);
@@ -322,10 +379,27 @@ export function sfx(kind) {
       tone(randInt(500, 900), 0, 0.08, 'sine', 0.2);
       break;
     case 'tap':
-      tone(520, 0, 0.07, 'sine', 0.1);
+      tone(620, 0, 0.06, 'sine', 0.09);
+      tone(930, 0.04, 0.07, 'sine', 0.06);
+      break;
+    case 'boing':
+      slide(260, 720, 0, 0.22, 'sine', 0.16);
       break;
     case 'win':
-      [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.12, 0.3));
+      // A little celebration tune, with a soft chime on top.
+      [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => {
+        const t = [0, 0.11, 0.22, 0.33, 0.5, 0.61, 0.75][i];
+        tone(f, t, i === 6 ? 0.6 : 0.22, 'triangle', 0.16);
+        tone(f * 2, t, 0.15, 'sine', 0.05);
+      });
+      break;
+    case 'firework':
+      slide(400, 1400, 0, 0.25, 'sine', 0.05);
+      noise(0.25, 0.35, { type: 'lowpass', freq: 1200, gain: 0.2 });
+      for (let i = 0; i < 6; i++) noise(0.3 + Math.random() * 0.3, 0.04, { type: 'highpass', freq: 4000, gain: 0.08 });
+      break;
+    case 'whee':
+      slide(400, 1200, 0, 0.5, 'triangle', 0.1);
       break;
   }
 }
@@ -335,6 +409,7 @@ function unlock() {
   // Let spoken words play through the speaker even when the iPad's silent switch is on.
   if (navigator.audioSession) navigator.audioSession.type = 'playback';
   ctx();
+  startMusic();
   if ('speechSynthesis' in window && !speechSynthesis.speaking) {
     const u = new SpeechSynthesisUtterance(' ');
     u.volume = 0;
@@ -342,6 +417,15 @@ function unlock() {
   }
 }
 document.addEventListener('pointerdown', unlock, { once: true, capture: true });
+
+// Each page picks its music with <body data-music="clappy|vibes|lullaby|none">.
+{
+  const track = document.body?.dataset.music ?? 'clappy';
+  if (track !== 'none') {
+    setTrack(track);
+    preload(track);
+  }
+}
 
 // ---------- Cheers & stars ----------
 const CHEERS = [
@@ -401,7 +485,48 @@ export function getStars() {
 }
 export function addStar(n = 1) {
   save(STARS_KEY, getStars() + n);
+  earnedStar(n);
   renderStars();
+  setTimeout(showNewRewards, 1200);
+}
+
+const BOOK_URL = new URL('../games/stickers.html', import.meta.url).href;
+
+// "You got a new sticker!" with the sticker spinning in, and a button to the sticker book.
+function showNewRewards() {
+  const { stickers, bonuses } = takeNewRewards();
+  if (!stickers.length && !bonuses.length) return;
+  const overlay = el('div', 'overlay reward-pop');
+  const box = el('div', 'overlay-box');
+  const items = [...stickers.map((x) => x.emoji), ...bonuses.map((b) => b.emoji)];
+  box.appendChild(el('p', 'prompt-text', bonuses.length ? 'A surprise present!' : 'A new sticker!'));
+  const show = el('div', 'reward-items');
+  items.forEach((e, i) => {
+    const sp = el('span', 'reward-item', e);
+    sp.style.animationDelay = `${i * 0.15}s`;
+    show.appendChild(sp);
+  });
+  const row = el('div', 'row');
+  const book = el('button', 'round-btn', '📒');
+  book.setAttribute('aria-label', 'Open my sticker book');
+  const ok = el('button', 'round-btn yes', '✔️');
+  ok.setAttribute('aria-label', 'Done');
+  row.append(book, ok);
+  box.append(show, row);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  confetti(30);
+  sfx('win');
+  const words = [
+    ...stickers.map((x) => `a new sticker, the ${x.name}`),
+    ...bonuses.map((b) => `a surprise: ${b.name}`),
+  ];
+  say(`Wow, ${KID}! You got ${words.join(', and ')}!`);
+  book.addEventListener('click', () => go(BOOK_URL));
+  ok.addEventListener('click', () => {
+    sfx('tap');
+    overlay.remove();
+  });
 }
 export function resetStars() {
   save(STARS_KEY, 0);
@@ -416,6 +541,42 @@ function renderStars() {
   });
 }
 
+// ---------- Page transitions & background ----------
+// Fade the page out, then go. Pages fade/slide in on load (CSS).
+export function go(url) {
+  stopSpeech?.();
+  document.body.classList.add('leaving');
+  setTimeout(() => (location.href = url), 180);
+}
+document.addEventListener('click', (e) => {
+  const a = e.target.closest?.('a[href]');
+  if (!a || a.target || a.hasAttribute('download') || e.metaKey || e.ctrlKey) return;
+  const url = new URL(a.href, location.href);
+  if (url.origin !== location.origin) return;
+  e.preventDefault();
+  sfx('tap');
+  go(url.href);
+});
+
+// Soft drifting clouds and rising bubbles behind everything (pure CSS animation, cheap to draw).
+function addSky() {
+  if (document.body.dataset.calm !== undefined || document.querySelector('.sky')) return;
+  const sky = document.createElement('div');
+  sky.className = 'sky';
+  sky.setAttribute('aria-hidden', 'true');
+  let html = '';
+  for (let i = 0; i < 4; i++) {
+    html += `<span class="cloud" style="top:${8 + i * 22}%;animation-duration:${60 + i * 17}s;animation-delay:-${i * 19}s;transform:scale(${0.7 + (i % 3) * 0.25})"></span>`;
+  }
+  for (let i = 0; i < 10; i++) {
+    html += `<span class="bubble-bg" style="left:${(i * 37) % 100}%;width:${14 + (i % 4) * 10}px;height:${14 + (i % 4) * 10}px;animation-duration:${14 + (i % 5) * 4}s;animation-delay:-${i * 3}s"></span>`;
+  }
+  sky.innerHTML = html;
+  document.body.prepend(sky);
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', addSky);
+else addSky();
+
 // ---------- Page chrome ----------
 // Builds the top bar: back button, title, repeat-the-question button, and star counter.
 // Returns controls so a game can change what Back and 🔊 do as she moves between screens.
@@ -426,11 +587,14 @@ export function topBar({ title, home = '../index.html' }) {
     <button class="round-btn" data-back aria-label="Back">⬅️</button>
     <h1></h1>
     <button class="round-btn hidden" data-repeat aria-label="Say it again">🔊</button>
-    <div class="stars" data-stars>⭐ <span>${getStars()}</span></div>`;
+    <button class="stars" data-stars aria-label="My sticker book">⭐ <span>${getStars()}</span></button>`;
   bar.querySelector('h1').textContent = title;
+  bar.querySelector('[data-stars]').addEventListener('click', () => {
+    if (!location.pathname.endsWith('stickers.html')) go(BOOK_URL);
+  });
   document.body.prepend(bar);
 
-  let backFn = () => (location.href = home);
+  let backFn = () => go(home);
   let repeatFn = null;
   const repeatBtn = bar.querySelector('[data-repeat]');
   bar.querySelector('[data-back]').addEventListener('click', () => {
@@ -441,7 +605,7 @@ export function topBar({ title, home = '../index.html' }) {
 
   return {
     onBack(fn) {
-      backFn = fn || (() => (location.href = home));
+      backFn = fn || (() => go(home));
     },
     onRepeat(fn) {
       repeatFn = fn;
@@ -483,23 +647,152 @@ export function modePicker({ main, bar, title, intro, modes }) {
 }
 
 // The end-of-round celebration with Play Again / Back buttons. Awards one star.
+// Fireworks drawn on a temporary full-screen canvas.
+export function fireworks(bursts = 5) {
+  const c = document.createElement('canvas');
+  c.className = 'fireworks';
+  const dpr = window.devicePixelRatio || 1;
+  c.width = innerWidth * dpr;
+  c.height = innerHeight * dpr;
+  document.body.appendChild(c);
+  const g = c.getContext('2d');
+  g.scale(dpr, dpr);
+  const sparks = [];
+  const colors = ['#ef4444', '#f97316', '#facc15', '#22c55e', '#3b82f6', '#a855f7', '#ec4899'];
+  for (let b = 0; b < bursts; b++) {
+    setTimeout(() => {
+      const x = innerWidth * (0.15 + Math.random() * 0.7);
+      const y = innerHeight * (0.15 + Math.random() * 0.4);
+      const col = pick(colors);
+      for (let i = 0; i < 46; i++) {
+        const a = (i / 46) * Math.PI * 2;
+        const v = 2 + Math.random() * 3.5;
+        sparks.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 60 + Math.random() * 20, col });
+      }
+      if (b % 2 === 0) sfx('firework');
+    }, b * 330);
+  }
+  let frames = 0;
+  (function tick() {
+    g.clearRect(0, 0, innerWidth, innerHeight);
+    for (const p of sparks) {
+      if (p.life <= 0) continue;
+      p.life--;
+      p.vy += 0.06;
+      p.vx *= 0.985;
+      p.x += p.vx;
+      p.y += p.vy;
+      g.globalAlpha = Math.min(1, p.life / 30);
+      g.fillStyle = p.col;
+      g.beginPath();
+      g.arc(p.x, p.y, 3.2, 0, Math.PI * 2);
+      g.fill();
+    }
+    if (++frames < 240) requestAnimationFrame(tick);
+    else c.remove();
+  })();
+}
+
+// Balloons float up; tapping one pops it.
+export function balloons(n = 8) {
+  const box = document.createElement('div');
+  box.className = 'balloons';
+  for (let i = 0; i < n; i++) {
+    const b = document.createElement('button');
+    b.className = 'balloon';
+    b.textContent = '🎈';
+    b.setAttribute('aria-label', 'balloon');
+    b.style.left = `${5 + Math.random() * 85}%`;
+    b.style.animationDuration = `${6 + Math.random() * 4}s`;
+    b.style.animationDelay = `${Math.random() * 1.5}s`;
+    b.style.filter = `hue-rotate(${Math.floor(Math.random() * 360)}deg)`;
+    b.addEventListener('pointerdown', () => {
+      sfx('pop');
+      const r = b.getBoundingClientRect();
+      burstAt(r.left + r.width / 2, r.top + r.height / 3);
+      b.remove();
+    });
+    box.appendChild(b);
+  }
+  document.body.appendChild(box);
+  setTimeout(() => box.remove(), 12000);
+  return box;
+}
+
+// A quick ring of sparkles at a point on screen.
+export function burstAt(x, y, bits = ['✨', '⭐', '💖', '🎉']) {
+  for (let i = 0; i < 8; i++) {
+    const el = document.createElement('span');
+    el.className = 'burst';
+    el.textContent = pick(bits);
+    const a = (i / 8) * Math.PI * 2;
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+    el.style.setProperty('--dx', `${Math.cos(a) * 70}px`);
+    el.style.setProperty('--dy', `${Math.sin(a) * 70}px`);
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 700);
+  }
+}
+
+// The big star flies up into the star counter, then the counter goes up.
+function flyStar(from) {
+  const target = document.querySelector('[data-stars]');
+  if (!from || !target) {
+    addStar(1);
+    return;
+  }
+  const a = from.getBoundingClientRect();
+  const b = target.getBoundingClientRect();
+  const star = document.createElement('div');
+  star.className = 'flying-star';
+  star.textContent = '⭐';
+  star.style.left = `${a.left + a.width / 2}px`;
+  star.style.top = `${a.top + a.height / 2}px`;
+  document.body.appendChild(star);
+  requestAnimationFrame(() => {
+    star.style.transform = `translate(${b.left + 30 - (a.left + a.width / 2)}px, ${b.top + b.height / 2 - (a.top + a.height / 2)}px) scale(0.35) rotate(360deg)`;
+  });
+  setTimeout(() => {
+    sfx('whee');
+  }, 100);
+  setTimeout(() => {
+    star.remove();
+    addStar(1);
+  }, 900);
+}
+
+// The end-of-round celebration with Play Again / Back buttons. Awards one star.
 export function doneScreen(main, { onAgain, onBack, message = `You did it, ${KID}!` }) {
-  addStar(1);
   sfx('win');
-  confetti(36);
+  confetti(30);
+  fireworks();
+  const floaters = balloons();
   main.innerHTML = `
     <div class="done-screen">
-      <div class="big">🌟</div>
+      <div class="done-row">
+        <div class="mascot-spot"></div>
+        <div class="big">🌟</div>
+      </div>
       <h2></h2>
-      <p class="note">You earned a star!</p>
+      <p class="note">You earned a star! Pop the balloons!</p>
       <div class="row">
         <button class="round-btn" data-again aria-label="Play again">🔁</button>
         <button class="round-btn" data-back aria-label="Back">🏠</button>
       </div>
     </div>`;
+  import('./mascot.js').then(({ unicornSVG }) => {
+    const spot = main.querySelector('.mascot-spot');
+    if (spot) spot.innerHTML = `<div class="mascot cheering">${unicornSVG()}</div>`;
+  });
   main.querySelector('h2').textContent = message;
-  main.querySelector('[data-again]').addEventListener('click', onAgain);
-  main.querySelector('[data-back]').addEventListener('click', onBack);
+  const leave = (fn) => () => {
+    floaters.remove();
+    fn();
+  };
+  main.querySelector('[data-again]').addEventListener('click', leave(onAgain));
+  main.querySelector('[data-back]').addEventListener('click', leave(onBack));
+  setTimeout(() => flyStar(main.querySelector('.done-screen .big')), 700);
   say(`${message} You earned a star!`);
 }
 

@@ -26,6 +26,9 @@ import {
   importData,
 } from './words-store.js';
 import { countPictures, deleteAllPictures } from './gallery-store.js';
+import { lastDays, totals, accuracy, topMixups, clearActivity, GAME_NAMES } from './activity.js';
+import { starsEver, unlockedStickers, unlockedBonuses, COLLECTIBLES, BONUSES } from './rewards.js';
+import { musicOn, setMusicOn } from './music.js';
 
 const main = document.getElementById('app');
 main.style.justifyContent = 'flex-start';
@@ -139,6 +142,7 @@ async function manage() {
     <div class="row" style="flex-direction:column;align-items:flex-start;gap:14px">
       <label><input type="checkbox" data-set="speech" ${s.speech ? 'checked' : ''}> Spoken words and instructions</label>
       <label><input type="checkbox" data-set="sounds" ${s.sounds ? 'checked' : ''}> Sound effects</label>
+      <label><input type="checkbox" data-music ${musicOn() ? 'checked' : ''}> Background music</label>
       <div class="row">
         <button class="btn danger" data-reset-stars>Reset stars</button>
         <button class="btn danger" data-reset-stats>Reset heart word scores</button>
@@ -146,6 +150,7 @@ async function manage() {
     </div>
     <p class="msg"></p>`;
   const settingsMsg = settingsPanel.querySelector('.msg');
+  settingsPanel.querySelector('[data-music]').addEventListener('change', (e) => setMusicOn(e.target.checked));
   settingsPanel.querySelectorAll('[data-set]').forEach((box) =>
     box.addEventListener('change', () => setSettings({ [box.dataset.set]: box.checked })),
   );
@@ -233,7 +238,61 @@ async function manage() {
     showPictureCount();
   });
 
-  main.append(addPanel, removedPanel, voicePanel, picturesPanel, backupPanel, settingsPanel);
+  // ---- Progress ----
+  const progressPanel = el('section', 'panel');
+  progressPanel.innerHTML = '<h2>📈 Progress (last 7 days)</h2>';
+  const days = lastDays(7);
+  const most = Math.max(1, ...days.map((d) => d.total));
+  const chart = el('div', 'week-chart');
+  for (const d of days) {
+    const col = el('div', 'week-col');
+    const barEl = el('div', 'week-bar');
+    barEl.style.height = `${(d.total / most) * 100}%`;
+    barEl.title = `${d.total} rounds`;
+    col.append(el('span', 'week-num', d.total ? String(d.total) : ''), barEl, el('span', 'week-day', d.date.toLocaleDateString(undefined, { weekday: 'short' })));
+    chart.appendChild(col);
+  }
+  progressPanel.appendChild(chart);
+  const tot = totals(7);
+  const acc = accuracy(7);
+  const games = Object.keys(GAME_NAMES).filter((g) => tot[g] || acc[g]);
+  const table = el('ul', 'words');
+  if (!games.length) table.innerHTML = '<li>No rounds yet this week.</li>';
+  for (const g of games) {
+    const a = acc[g] || { right: 0, wrong: 0 };
+    const tries = a.right + a.wrong;
+    const li = el('li');
+    li.innerHTML = `<span class="w" style="font-size:20px"></span><span class="s"></span>`;
+    li.querySelector('.w').textContent = GAME_NAMES[g];
+    li.querySelector('.s').textContent = `${tot[g] || 0} rounds${tries ? ` · ${Math.round((a.right / tries) * 100)}% right on the first try` : ''}`;
+    table.appendChild(li);
+  }
+  progressPanel.appendChild(table);
+  // Heart words she knows: marked learned, or right 3+ times on the first try
+  const words = await getWords();
+  const mastered = words.filter((w) => isLearned(w) || getStats(w).right >= 3);
+  const practice = words.filter((w) => !mastered.includes(w) && getStats(w).wrong > getStats(w).right);
+  const info = el('div');
+  info.innerHTML = `
+    <p><b>Heart words she knows (${mastered.length} of ${words.length}):</b> <span data-mastered></span></p>
+    <p><b>Heart words to practice:</b> <span data-practice></span></p>
+    <p><b>Letter mix-ups:</b> <span data-mixups></span></p>
+    <p><b>Stars earned ever:</b> ${starsEver()} · <b>Stickers:</b> ${unlockedStickers().length} of ${COLLECTIBLES.length} · <b>Surprises:</b> ${unlockedBonuses().length} of ${BONUSES.length}</p>
+    <button class="btn light" data-clear-activity>Clear progress history</button>`;
+  info.querySelector('[data-mastered]').textContent = mastered.join(', ') || 'none yet';
+  info.querySelector('[data-practice]').textContent = practice.join(', ') || 'none right now';
+  const mix = topMixups('letters');
+  info.querySelector('[data-mixups]').textContent = mix.length
+    ? mix.map(([k, n]) => { const [w, t] = k.split('→'); return `wanted ${w}, tapped ${t} (${n}×)`; }).join('; ')
+    : 'none recorded';
+  info.querySelector('[data-clear-activity]').addEventListener('click', () => {
+    if (!confirm('Clear the progress history? (Stars, stickers and words stay.)')) return;
+    clearActivity();
+    manage();
+  });
+  progressPanel.appendChild(info);
+
+  main.append(progressPanel, addPanel, removedPanel, voicePanel, picturesPanel, backupPanel, settingsPanel);
 
   async function renderList() {
     const list = addPanel.querySelector('.words');

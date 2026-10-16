@@ -10,6 +10,7 @@
 //
 // Wrong taps wiggle and let her try again; no timers, no losing.
 import { cheer, tryAgain, say, doneScreen, sfx, shuffle, prefetch } from './common.js';
+import { logRound, logAnswer, currentGame } from './activity.js';
 
 export function runQuiz({ main, bar, count = 6, makeQuestion, onAnswer, onFinish, onExit }) {
   let index = 0;
@@ -34,13 +35,15 @@ export function runQuiz({ main, bar, count = 6, makeQuestion, onAnswer, onFinish
     wrongs = 0;
     main.innerHTML = '';
 
+    // Treasure jar: fills up with a gem for every right answer this round.
     const progress = document.createElement('div');
     progress.className = 'progress';
-    for (let i = 0; i < count; i++) {
-      const dot = document.createElement('span');
-      if (i < index) dot.className = 'done';
-      progress.appendChild(dot);
-    }
+    progress.innerHTML = `
+      <div class="jar" aria-label="treasure jar">
+        <div class="jar-lid"></div>
+        <div class="jar-fill" style="height:${(index / count) * 100}%"></div>
+        <span class="jar-count">${index} / ${count}</span>
+      </div>`;
 
     const prompt = document.createElement('div');
     prompt.className = 'prompt';
@@ -60,9 +63,10 @@ export function runQuiz({ main, bar, count = 6, makeQuestion, onAnswer, onFinish
 
     const choices = document.createElement('div');
     choices.className = 'choices';
-    for (const choice of current.choices) {
+    for (const [i, choice] of current.choices.entries()) {
       const btn = document.createElement('button');
-      btn.className = `choice ${choice.className || ''}`;
+      btn.className = `choice pop-in ${choice.className || ''}`;
+      btn.style.animationDelay = `${0.15 + i * 0.12}s`; // answers bounce in one by one
       btn.innerHTML = choice.html;
       btn.setAttribute('aria-label', choice.label || String(choice.value));
       btn.addEventListener('click', () => answer(btn, choice));
@@ -81,7 +85,8 @@ export function runQuiz({ main, bar, count = 6, makeQuestion, onAnswer, onFinish
   async function answer(btn, choice) {
     if (busy || btn.classList.contains('wrong')) return;
     const right = choice.value === current.answer;
-    onAnswer?.(current, right, firstTry);
+    onAnswer?.(current, right, firstTry, choice);
+    if (firstTry) logAnswer(currentGame(), right);
     waitForTap();
     if (!right) {
       firstTry = false;
@@ -100,10 +105,12 @@ export function runQuiz({ main, bar, count = 6, makeQuestion, onAnswer, onFinish
     busy = true;
     btn.classList.add('right');
     main.querySelectorAll('.choice').forEach((b) => (b.disabled = true));
+    gemToJar(btn, (index + 1) / count);
     await cheer(current.praise);
     busy = false;
     index++;
     if (index >= count) {
+      logRound(currentGame());
       onFinish?.();
       doneScreen(main, {
         onAgain: () => {
@@ -117,6 +124,32 @@ export function runQuiz({ main, bar, count = 6, makeQuestion, onAnswer, onFinish
     } else {
       render();
     }
+  }
+
+  // A gem flies from the right answer into the treasure jar.
+  function gemToJar(btn, level) {
+    const jar = main.querySelector('.jar');
+    if (!jar) return;
+    const a = btn.getBoundingClientRect();
+    const b = jar.getBoundingClientRect();
+    const gem = document.createElement('div');
+    gem.className = 'flying-gem';
+    gem.textContent = ['💎', '💖', '⭐', '🔮'][index % 4];
+    gem.style.left = `${a.left + a.width / 2}px`;
+    gem.style.top = `${a.top + a.height / 2}px`;
+    document.body.appendChild(gem);
+    requestAnimationFrame(() => {
+      gem.style.transform = `translate(${b.left + b.width / 2 - (a.left + a.width / 2)}px, ${b.top + b.height / 2 - (a.top + a.height / 2)}px) scale(.5)`;
+    });
+    setTimeout(() => {
+      gem.remove();
+      sfx('clink');
+      const fill = jar.querySelector('.jar-fill');
+      if (fill) fill.style.height = `${level * 100}%`;
+      jar.classList.remove('jiggle');
+      void jar.offsetWidth;
+      jar.classList.add('jiggle');
+    }, 650);
   }
 
   render();
