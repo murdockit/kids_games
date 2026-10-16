@@ -206,11 +206,11 @@ main {
 .prompt-show svg { width: 80px; height: 80px; }
 
 .progress { display: flex; gap: 10px; }
-.progress span {
+.progress > span {
   width: 22px; height: 22px; border-radius: 50%;
   background: #e8dfcf;
 }
-.progress span.done { background: var(--yellow); }
+.progress > span.done { background: var(--yellow); }
 
 .speak-btn {
   font-size: 30px;
@@ -621,3 +621,127 @@ body { background: transparent; }
   from { transform: translateY(80vh) rotate(18deg) scale(.6); opacity: 0; }
   to { transform: rotate(-3deg); opacity: 1; }
 }
+
+/* =================== Round 2: rewards, quiz jar, progress, extras =================== */
+
+/* Star counter is a button to the sticker book */
+button.stars { cursor: pointer; border: 0; color: var(--ink); }
+
+/* Home: sticker book banner tile */
+.tile.teal { background: #14b8a6; }
+.tile.banner { grid-column: 1 / -1; min-height: 100px; flex-direction: row; gap: 18px; }
+.tile.banner .emoji { font-size: 56px; }
+
+/* Quiz: answers bounce in one by one */
+.choice.pop-in { animation: choice-in .5s cubic-bezier(.3,1.7,.5,1) both; }
+@keyframes choice-in { from { transform: scale(.2) translateY(30px); opacity: 0; } to { transform: none; opacity: 1; } }
+.choice.help { animation: help-bounce .7s ease infinite !important; }
+
+/* Quiz: treasure jar */
+.jar {
+  position: relative;
+  width: 86px;
+  height: 92px;
+  border: 5px solid #94a3b8;
+  border-top-width: 3px;
+  border-radius: 14px 14px 30px 30px;
+  background: rgba(255,255,255,.6);
+  overflow: hidden;
+  box-shadow: inset 0 0 0 4px rgba(255,255,255,.7), var(--shadow);
+}
+.jar-lid { position: absolute; top: 0; left: -5px; right: -5px; height: 10px; background: #f59e0b; border-radius: 6px; z-index: 2; }
+.jar-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(circle at 20% 70%, #f472b6 0 7px, transparent 8px),
+    radial-gradient(circle at 60% 40%, #60a5fa 0 7px, transparent 8px),
+    radial-gradient(circle at 80% 80%, #facc15 0 7px, transparent 8px),
+    radial-gradient(circle at 40% 20%, #a78bfa 0 6px, transparent 7px),
+    linear-gradient(180deg, #fde68a, #fbbf24);
+  background-size: 40px 30px, 40px 30px, 40px 30px, 40px 30px, 100% 100%;
+  transition: height .5s cubic-bezier(.3,1.6,.5,1);
+}
+.jar-count { position: absolute; inset: 0; display: grid; place-items: center; font-weight: 700; font-size: 18px; z-index: 1; color: var(--ink); }
+.jar.jiggle { animation: jiggle .5s ease; }
+@keyframes jiggle { 25% { transform: rotate(-8deg) scale(1.08); } 75% { transform: rotate(6deg) scale(1.04); } }
+.flying-gem {
+  position: fixed;
+  z-index: 80;
+  font-size: 54px;
+  margin: -27px 0 0 -27px;
+  pointer-events: none;
+  transition: transform .6s cubic-bezier(.5,-0.4,.4,1);
+}
+
+/* Sticker book */
+main.sticker-book { justify-content: flex-start; gap: 18px; }
+.reward-bar {
+  position: relative;
+  width: min(100%, 520px);
+  height: 46px;
+  border-radius: 23px;
+  background: #fff;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+}
+.reward-bar span { position: relative; }
+.reward-fill { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #fde68a, #f9a8d4); }
+.sticker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 14px;
+  width: 100%;
+}
+.sticker-slot {
+  aspect-ratio: 1;
+  border-radius: 24px;
+  background: #efe7d8;
+  box-shadow: inset 0 3px 0 rgba(0,0,0,.06);
+  font-size: 34px;
+  font-weight: 700;
+  color: #b8ad9a;
+  animation: pop-in .4s both;
+}
+.sticker-slot.got {
+  background: #fff;
+  box-shadow: var(--shadow);
+  font-size: 58px;
+  color: inherit;
+}
+.surprises { width: 100%; text-align: center; }
+.surprises h2 { margin: 6px 0 12px; }
+.sticker-slot.surprise { width: 96px; font-size: 48px; }
+
+/* "New sticker!" pop-up */
+.reward-items { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; }
+.reward-item { font-size: 120px; line-height: 1; animation: reward-in .9s cubic-bezier(.3,1.6,.5,1) both; }
+@keyframes reward-in { from { transform: scale(0) rotate(-360deg); } 70% { transform: scale(1.2) rotate(10deg); } to { transform: none; } }
+
+/* Coloring: paint splash ripple, and glittery saved pictures */
+.splat {
+  position: fixed;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 6px solid;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 40;
+  animation: splat .55s ease-out forwards;
+}
+@keyframes splat { to { transform: scale(7); opacity: 0; } }
+.glitter-frame { position: relative; display: inline-block; max-width: 100%; }
+.glitter-frame img.saveable { display: block; }
+.glint { position: absolute; font-size: 26px; pointer-events: none; animation: twinkle 2.4s ease-in-out infinite; }
+
+/* Grown-ups progress chart */
+.week-chart { display: flex; align-items: flex-end; gap: 10px; height: 150px; margin: 8px 0 14px; }
+.week-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; }
+.week-bar { width: 70%; min-height: 4px; border-radius: 8px 8px 2px 2px; background: linear-gradient(180deg, var(--purple), var(--blue)); }
+.week-day, .week-num { font-size: 14px; color: var(--muted); }

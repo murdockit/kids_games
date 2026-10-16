@@ -8,6 +8,7 @@ COPY js /usr/share/nginx/html/js
 COPY games /usr/share/nginx/html/games
 COPY icons /usr/share/nginx/html/icons
 COPY fonts /usr/share/nginx/html/fonts
+COPY music /usr/share/nginx/html/music
 # Default word list baked in; docker-compose mounts ./data over it so edits apply without a rebuild.
 COPY data /usr/share/nginx/html/data
 

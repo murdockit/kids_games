@@ -14,6 +14,7 @@ import {
   wearablePreview,
   outfitPreview,
 } from './salon-wardrobe.js';
+import { hasBonus, unlockedStickers } from '../rewards.js';
 
 const main = document.getElementById('app');
 const bar = topBar({ title: 'Hair Salon' });
@@ -41,7 +42,14 @@ const HAIR_COLORS = [
   ['teal', '#14b8a6'], ['green', '#22c55e'], ['orange', '#f97316'], ['yellow', '#facc15'], ['rainbow', 'rainbow'],
 ].map(([name, hex]) => ({ name, hex }));
 
-const STICKERS = ['⭐', '🦋', '🌸', '💎', '🌈', '🍓', '❤️', '✨', '🍭', '🐞', '🌟', '🎈'];
+// Decorations, plus every sticker she has collected in her sticker book.
+const STICKERS = [
+  ...new Set(['⭐', '🦋', '🌸', '💎', '🌈', '🍓', '❤️', '✨', '🍭', '🐞', '🌟', '🎈', ...unlockedStickers().map((s) => s.emoji)]),
+];
+// Bonus clothes and accessories appear once she's unlocked them with stars.
+const outfitsAvailable = () => OUTFITS.filter((o) => !o.bonus || hasBonus('outfit', o.id));
+const wearAvailable = (slot) =>
+  WEARABLES.filter((w) => w.slot === slot && (!w.bonus || hasBonus(slot === 'head' ? 'hat' : 'glasses', w.id)));
 
 const LINES = {
   hello: (f) => [`Hi! I'm ${f.name}. Can you do my hair?`, `Hello ${KID}! I'm ${f.name}. Let's make my hair fancy!`],
@@ -687,7 +695,7 @@ function salon(friend) {
     used.add('clothes');
     say('Pick some clothes! Then pick a color.');
     dressTray('Clothes', [
-      OUTFITS.map((o) => ({
+      outfitsAvailable().map((o) => ({
         label: o.name,
         img: outfitPreview(o, friend, o.color),
         isOn: () => st.outfit.id === o.id,
@@ -713,7 +721,7 @@ function salon(friend) {
     used.add('wear');
     say('Try on a hat or glasses! Tap again to take it off.');
     const items = (slot) =>
-      WEARABLES.filter((w) => w.slot === slot).map((w) => ({
+      wearAvailable(slot).map((w) => ({
         label: w.name,
         img: wearablePreview(w, friend),
         isOn: () => st.wear[w.slot] === w.id,

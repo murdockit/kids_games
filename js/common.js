@@ -1,4 +1,6 @@
 // Shared helpers for Lydia's Games: speech, sounds, cheers, stars, storage, page chrome.
+import { earnedStar, takeNewRewards } from './rewards.js';
+import { setTrack, startMusic, duck, preload } from './music.js';
 
 export const KID = 'Lydia';
 
@@ -226,11 +228,14 @@ export function say(text) {
   stopSpeech();
   if (!text || !getSettings().speech) return Promise.resolve();
   const id = speechId;
-  if (current?.natural && ctx()) {
-    // If the voice container is unreachable, say it with the iPad's voice instead.
-    return sayNatural(text, id).catch(() => (id === speechId ? sayIpad(text) : undefined));
-  }
-  return sayIpad(text);
+  duck(true); // music dips while someone is talking
+  const done = current?.natural && ctx()
+    ? // If the voice container is unreachable, say it with the iPad's voice instead.
+      sayNatural(text, id).catch(() => (id === speechId ? sayIpad(text) : undefined))
+    : sayIpad(text);
+  return done.finally(() => {
+    if (id === speechId) duck(false);
+  });
 }
 
 // ---------- Sound effects (tiny Web Audio tones; nothing harsh) ----------
@@ -259,6 +264,32 @@ function tone(freq, start, dur, type = 'sine', gain = 0.18) {
   osc.connect(g).connect(ac.destination);
   osc.start(t);
   osc.stop(t + dur + 0.05);
+}
+
+// Each game has its own "that's right!" sound.
+function goodSound() {
+  const game = location.pathname.split('/').pop().replace(/\.html$/, '');
+  switch (game) {
+    case 'letters': // xylophone
+      tone(784, 0, 0.25, 'sine', 0.2);
+      tone(1175, 0.09, 0.35, 'sine', 0.18);
+      tone(3136, 0, 0.05, 'sine', 0.05);
+      break;
+    case 'counting': // coin
+      tone(988, 0, 0.08, 'square', 0.06);
+      tone(1319, 0.08, 0.3, 'square', 0.06);
+      break;
+    case 'heart-words': // harp
+      [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.05, 0.4, 'triangle', 0.12));
+      break;
+    case 'shapes': // marimba
+      tone(523, 0, 0.18, 'sine', 0.22);
+      tone(784, 0.1, 0.25, 'sine', 0.2);
+      break;
+    default:
+      tone(660, 0, 0.18);
+      tone(880, 0.1, 0.25);
+  }
 }
 
 // A tone that glides from one pitch to another (boing, whee).
@@ -329,8 +360,16 @@ export function sfx(kind) {
       noise(0.09, 0.06, { type: 'highpass', freq: 2000, gain: 0.25 });
       break;
     case 'good':
-      tone(660, 0, 0.18);
-      tone(880, 0.1, 0.25);
+      goodSound();
+      navigator.vibrate?.(25); // a tiny buzz where the device supports it (most iPads don't)
+      break;
+    case 'clink':
+      tone(1568, 0, 0.12, 'triangle', 0.12);
+      tone(2093, 0.06, 0.25, 'triangle', 0.1);
+      break;
+    case 'splat':
+      noise(0, 0.18, { type: 'lowpass', freq: 700, gain: 0.25 });
+      slide(300, 120, 0, 0.18, 'sine', 0.12);
       break;
     case 'oops':
       tone(330, 0, 0.18, 'triangle', 0.14);
@@ -370,6 +409,7 @@ function unlock() {
   // Let spoken words play through the speaker even when the iPad's silent switch is on.
   if (navigator.audioSession) navigator.audioSession.type = 'playback';
   ctx();
+  startMusic();
   if ('speechSynthesis' in window && !speechSynthesis.speaking) {
     const u = new SpeechSynthesisUtterance(' ');
     u.volume = 0;
@@ -377,6 +417,15 @@ function unlock() {
   }
 }
 document.addEventListener('pointerdown', unlock, { once: true, capture: true });
+
+// Each page picks its music with <body data-music="clappy|vibes|lullaby|none">.
+{
+  const track = document.body?.dataset.music ?? 'clappy';
+  if (track !== 'none') {
+    setTrack(track);
+    preload(track);
+  }
+}
 
 // ---------- Cheers & stars ----------
 const CHEERS = [
@@ -436,7 +485,48 @@ export function getStars() {
 }
 export function addStar(n = 1) {
   save(STARS_KEY, getStars() + n);
+  earnedStar(n);
   renderStars();
+  setTimeout(showNewRewards, 1200);
+}
+
+const BOOK_URL = new URL('../games/stickers.html', import.meta.url).href;
+
+// "You got a new sticker!" with the sticker spinning in, and a button to the sticker book.
+function showNewRewards() {
+  const { stickers, bonuses } = takeNewRewards();
+  if (!stickers.length && !bonuses.length) return;
+  const overlay = el('div', 'overlay reward-pop');
+  const box = el('div', 'overlay-box');
+  const items = [...stickers.map((x) => x.emoji), ...bonuses.map((b) => b.emoji)];
+  box.appendChild(el('p', 'prompt-text', bonuses.length ? 'A surprise present!' : 'A new sticker!'));
+  const show = el('div', 'reward-items');
+  items.forEach((e, i) => {
+    const sp = el('span', 'reward-item', e);
+    sp.style.animationDelay = `${i * 0.15}s`;
+    show.appendChild(sp);
+  });
+  const row = el('div', 'row');
+  const book = el('button', 'round-btn', '📒');
+  book.setAttribute('aria-label', 'Open my sticker book');
+  const ok = el('button', 'round-btn yes', '✔️');
+  ok.setAttribute('aria-label', 'Done');
+  row.append(book, ok);
+  box.append(show, row);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  confetti(30);
+  sfx('win');
+  const words = [
+    ...stickers.map((x) => `a new sticker, the ${x.name}`),
+    ...bonuses.map((b) => `a surprise: ${b.name}`),
+  ];
+  say(`Wow, ${KID}! You got ${words.join(', and ')}!`);
+  book.addEventListener('click', () => go(BOOK_URL));
+  ok.addEventListener('click', () => {
+    sfx('tap');
+    overlay.remove();
+  });
 }
 export function resetStars() {
   save(STARS_KEY, 0);
@@ -497,8 +587,11 @@ export function topBar({ title, home = '../index.html' }) {
     <button class="round-btn" data-back aria-label="Back">⬅️</button>
     <h1></h1>
     <button class="round-btn hidden" data-repeat aria-label="Say it again">🔊</button>
-    <div class="stars" data-stars>⭐ <span>${getStars()}</span></div>`;
+    <button class="stars" data-stars aria-label="My sticker book">⭐ <span>${getStars()}</span></button>`;
   bar.querySelector('h1').textContent = title;
+  bar.querySelector('[data-stars]').addEventListener('click', () => {
+    if (!location.pathname.endsWith('stickers.html')) go(BOOK_URL);
+  });
   document.body.prepend(bar);
 
   let backFn = () => go(home);
