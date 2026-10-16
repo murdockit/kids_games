@@ -8,7 +8,7 @@ Simple learning games for a kindergartner, made for an iPad. Plain HTML/CSS/Java
 | 🔤 Letters | Find the letter you hear · Big & little letters · First sounds (which picture starts with B?) |
 | 🔢 Counting | How many? (tap to count out loud) · Which has more or fewer? · Add & take away within 10 |
 | 🔺 Shapes & Colors | Find the shape or color · What comes next? (patterns) · Sort into baskets |
-| 🎨 Free Play | Drawing pad (brushes, rainbow & sparkle, paint bucket, stamps, coloring pages, undo, save) · My Pictures · Bubble pop · Animal memory match |
+| 🎨 Free Play | Drawing pad: 35 coloring pages in 5 groups, 28 named colors, paint bucket with magic patterns (rainbow, dots, stripes, glitter, hearts), brushes, stamps, undo, save · My Pictures · Bubble pop · Animal memory match |
 
 Every instruction is spoken, and 🔊 repeats it, so she doesn't need to read to play. There are no timers and no way to lose: a wrong tap wiggles and she tries again. Each round finishes with a cheer and a ⭐.
 
@@ -58,7 +58,7 @@ js/common.js                speech, sounds, cheers, stars, top bar, mode picker
 js/quiz.js                  shared multiple-choice round runner
 js/words-store.js           heart words: starter file + this iPad's changes
 js/gallery-store.js         saved pictures (IndexedDB on the iPad)
-js/coloring-pages.js        coloring page line art
+js/coloring-pages.js        coloring page line art (add a picture: one SVG entry, white-filled shapes)
 tts/                        natural-voice container (Piper text-to-speech server)
 js/games/*.js               each game's logic
 css/style.css               shared styles (big tap targets, no zoom/selection)
