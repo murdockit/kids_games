@@ -957,3 +957,65 @@ main.pet-page { justify-content: flex-start; gap: 14px; }
 .story-text .w { border-radius: 10px; padding: 0 4px; transition: background .15s; cursor: pointer; }
 .story-text .w.heart { text-decoration: underline 4px var(--pink); text-underline-offset: 8px; }
 .story-text .w.reading { background: #fff1b8; }
+
+/* ---------- Round 3C: adventure, players, rest time ---------- */
+.adventure-map {
+  position: relative; width: min(94vw, 760px); aspect-ratio: 1; max-height: 64vh;
+  border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
+  background: radial-gradient(circle at 30% 20%, #d9f99d, transparent 40%), radial-gradient(circle at 80% 80%, #bbf7d0, transparent 45%), linear-gradient(#a7f3d0, #86efac);
+}
+.adventure-map svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.adventure-map .trail { fill: none; stroke: #fef3c7; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.adventure-map .trail { stroke-width: 18px; stroke-dasharray: 2 26; }
+.stop {
+  position: absolute; transform: translate(-50%, -50%); width: 104px; height: 104px; border-radius: 50%;
+  background: #fff; box-shadow: var(--shadow); display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.stop-emoji { font-size: 50px; line-height: 1; }
+.stop-name {
+  position: absolute; top: 100%; margin-top: 6px; white-space: nowrap; font-size: 18px; font-weight: 700;
+  background: rgba(255,255,255,.85); padding: 2px 10px; border-radius: 12px;
+}
+.stop.done::after { content: '✅'; position: absolute; right: -6px; top: -6px; font-size: 32px; }
+.stop.now { outline: 6px solid var(--yellow); animation: help-bounce 1.2s ease infinite; }
+.stop.later { opacity: .55; filter: grayscale(.6); }
+.adventure-unicorn {
+  position: absolute; width: 104px; transform: translate(12%, -128%); pointer-events: none;
+  transition: left 1.2s cubic-bezier(.4,1.4,.5,1), top 1.2s cubic-bezier(.4,1.4,.5,1);
+}
+.adventure-unicorn svg { width: 100%; height: auto; display: block; }
+.adventure-speech { max-width: 760px; text-align: center; }
+.treasure-chest { font-size: 160px; background: none; animation: help-bounce 1.2s ease infinite; }
+
+.players { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.players[hidden] { display: none; }
+.player-chip {
+  display: flex; align-items: center; gap: 8px; padding: 8px 18px 8px 10px; border-radius: 40px;
+  background: #fff; box-shadow: var(--shadow); font-size: 24px; font-weight: 700;
+}
+.player-chip span { font-size: 36px; }
+.player-chip.on { outline: 5px solid var(--purple); }
+
+.rest-screen {
+  position: fixed; inset: 0; z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 18px; background: linear-gradient(#1e1b4b, #3b0764); color: #fff; text-align: center; padding: 24px;
+}
+.rest-screen .mascot { width: 220px; }
+.rest-screen .mascot svg { width: 100%; height: auto; }
+.rest-screen h2 { font-size: clamp(36px, 6vw, 54px); margin: 0; }
+.rest-screen p { font-size: 22px; opacity: .85; margin: 0; }
+.rest-screen .zz { font-size: 50px; animation: float 2s ease-in-out infinite; }
+.rest-screen .grownup-btn { margin-top: 30px; background: rgba(255,255,255,.15); color: #fff; padding: 10px 18px; border-radius: 16px; font-size: 18px; }
+.rest-screen input { font: inherit; font-size: 28px; width: 140px; padding: 8px 12px; border-radius: 12px; border: 0; text-align: center; }
+.rest-screen .btn { background: #fff; color: #3b0764; padding: 12px 18px; border-radius: 14px; font-size: 20px; font-weight: 700; }
+.rest-screen .row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.say-card { min-width: min(80vw, 520px); min-height: 220px; font-size: clamp(72px, 14vw, 130px); }
+.mic-btn {
+  width: 150px; height: 150px; border-radius: 50%; font-size: 70px;
+  background: linear-gradient(#fb7185, #e11d48); box-shadow: var(--shadow);
+}
+.mic-btn.recording { animation: mic-pulse 1s ease-in-out infinite; background: linear-gradient(#f87171, #b91c1c); }
+@keyframes mic-pulse { 50% { transform: scale(1.08); box-shadow: 0 0 0 18px rgba(248,113,113,.25), var(--shadow); } }
+.mic-meter { width: min(70vw, 360px); height: 16px; border-radius: 8px; background: #eadfcd; overflow: hidden; }
+.mic-meter i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #4ade80, #facc15, #f97316); transition: width .08s; }
+.choices[hidden] { display: none; }

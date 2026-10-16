@@ -1,6 +1,6 @@
 // Free Play: no wrong answers. Drawing, saved pictures, bubbles, memory match, music, puzzles,
 // dot-to-dot and mazes.
-import { topBar, modePicker, pick, shuffle, say, sfx, cheer, doneScreen, el, randInt, askYesNo } from '../common.js';
+import { topBar, modePicker, pick, shuffle, say, sfx, cheer, doneScreen, el, randInt, askYesNo, KID } from '../common.js';
 import { getWords } from '../words-store.js';
 import { draw } from './draw.js';
 import { listPictures, deletePicture } from '../gallery-store.js';
@@ -79,7 +79,7 @@ function preview(pic) {
   main.innerHTML = '';
   const img = el('img', 'saveable');
   img.src = pic.image;
-  img.alt = 'Lydia\'s picture';
+  img.alt = `${KID}'s picture`;
   const hint = el('p', 'note', 'Grown-ups: press and hold the picture to save it to Photos.');
   const row = el('div', 'choices');
   const edit = el('button', 'round-btn big-action', '✏️');

@@ -2,6 +2,8 @@
 // (a salon outfit, hat or glasses, or a coloring page). Rewards only add extras; nothing
 // she already has is ever locked. Unlocks follow "stars ever earned", which never goes down,
 // so resetting the star counter in Grown-ups doesn't take stickers away.
+import { load, save } from './storage.js';
+
 const EVER_KEY = 'lg.starsEver';
 const SEEN_KEY = 'lg.rewardsSeen';
 
@@ -32,21 +34,8 @@ export const BONUSES = [
   { kind: 'outfit', id: 'onesie', name: 'a unicorn onesie', emoji: '🦄' },
 ];
 
-function read(key, fallback) {
-  try {
-    const v = JSON.parse(localStorage.getItem(key));
-    return v ?? fallback;
-  } catch {
-    return fallback;
-  }
-}
-function write(key, value) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    /* not saved */
-  }
-}
+const read = load;
+const write = save;
 
 export function starsEver() {
   return Number(read(EVER_KEY, 0)) || 0;

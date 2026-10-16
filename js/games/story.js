@@ -1,6 +1,6 @@
 // Story Time: picture books read aloud. Each word lights up as it's read; tap any word to hear it.
 // Her heart words are underlined in pink, so she can spot the ones she knows.
-import { topBar, say, sfx, doneScreen, el, prefetch } from '../common.js';
+import { topBar, say, sfx, doneScreen, el, prefetch, KID } from '../common.js';
 import { getWords } from '../words-store.js';
 import { logRound } from '../activity.js';
 import { STORIES } from '../stories.js';
@@ -36,7 +36,9 @@ function read(story) {
   let page = -1; // the cover
   bar.setTitle(story.title);
   bar.onBack(shelf);
-  prefetch([story.title, ...story.pages.map((p) => p.text)]);
+  // The stories star whoever is playing.
+  const named = (p) => ({ ...p, text: p.text.replace(/Lydia/g, KID) });
+  prefetch([story.title, ...story.pages.map((p) => named(p).text)]);
 
   main.innerHTML = '';
   const book = el('div', 'book-page');
@@ -76,7 +78,7 @@ function read(story) {
   function show() {
     readId++;
     const isCover = page < 0;
-    const p = isCover ? { text: story.title, scene: [[story.cover, 50, 52, 46, 'bob']] } : story.pages[page];
+    const p = isCover ? { text: story.title, scene: [[story.cover, 50, 52, 46, 'bob']] } : named(story.pages[page]);
     scene.innerHTML = '';
     for (const [emoji, x, y, size, anim] of p.scene) {
       const s = el('span', `scene-item ${anim || ''}`, emoji);

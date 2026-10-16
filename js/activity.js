@@ -1,5 +1,7 @@
 // A small activity log for the Grown-ups progress page: rounds played per day and game,
-// right/wrong taps, and which letters/numbers she mixes up. Stays on this iPad (localStorage).
+// right/wrong taps, and which letters/numbers she mixes up. Kept per player (see storage.js).
+import { load, save } from './storage.js';
+
 const KEY = 'lg.activity';
 const KEEP_DAYS = 60;
 
@@ -17,23 +19,14 @@ export const GAME_NAMES = {
   tracing: 'Tracing',
   pet: 'My Pet',
   stories: 'Story Time',
+  adventure: "Today's Adventure",
 };
 
 function read() {
-  try {
-    const v = JSON.parse(localStorage.getItem(KEY));
-    return v && typeof v === 'object' ? { days: {}, misses: {}, ...v } : { days: {}, misses: {} };
-  } catch {
-    return { days: {}, misses: {} };
-  }
+  const v = load(KEY, null);
+  return v && typeof v === 'object' ? { days: {}, misses: {}, ...v } : { days: {}, misses: {} };
 }
-function write(data) {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(data));
-  } catch {
-    /* not saved */
-  }
-}
+const write = (data) => save(KEY, data);
 
 export const today = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

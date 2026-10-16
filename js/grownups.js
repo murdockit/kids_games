@@ -1,4 +1,4 @@
-// Grown-ups screen: manage heart words, back up / restore, and settings.
+// Grown-ups screen: players, progress, heart words, play time, backup, voice, microphone and settings.
 import {
   topBar,
   randInt,
@@ -29,6 +29,9 @@ import { countPictures, deleteAllPictures } from './gallery-store.js';
 import { lastDays, totals, accuracy, topMixups, clearActivity, GAME_NAMES } from './activity.js';
 import { starsEver, unlockedStickers, unlockedBonuses, COLLECTIBLES, BONUSES } from './rewards.js';
 import { musicOn, setMusicOn } from './music.js';
+import { getProfiles, currentProfile, setCurrentProfile, addProfile, updateProfile, removeProfile } from './storage.js';
+import { getLimits, setLimits, playToday } from './limits.js';
+import { syncNow, syncStatus } from './sync.js';
 
 const main = document.getElementById('app');
 main.style.justifyContent = 'flex-start';
@@ -73,7 +76,7 @@ async function manage() {
   const addPanel = el('section', 'panel');
   addPanel.innerHTML = `
     <h2>❤️ Heart words</h2>
-    <p>Add words Lydia is learning. Separate several with commas.</p>
+    <p>Add words ${KID} is learning. Separate several with commas.</p>
     <form class="row">
       <input type="text" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="e.g. was, have, they" aria-label="New heart words">
       <button class="btn" type="submit">Add</button>
@@ -96,9 +99,9 @@ async function manage() {
   // ---- Backup ----
   const backupPanel = el('section', 'panel');
   backupPanel.innerHTML = `
-    <h2>💾 Backup</h2>
-    <p>Word changes are saved on this iPad only. Export a backup to keep them safe or move them to another device.
-       The exported file can also replace <code>data/heart-words.json</code> on the computer running the games.</p>
+    <h2>📤 Export heart words</h2>
+    <p>Save this player's word list as a file, or load one. The exported file can also replace
+       <code>data/heart-words.json</code> on the computer running the games.</p>
     <div class="row">
       <button class="btn" data-export>Export words</button>
       <label class="btn light" style="cursor:pointer">Import words…
@@ -155,7 +158,7 @@ async function manage() {
     box.addEventListener('change', () => setSettings({ [box.dataset.set]: box.checked })),
   );
   settingsPanel.querySelector('[data-reset-stars]').addEventListener('click', () => {
-    if (!confirm('Reset Lydia’s stars to 0?')) return;
+    if (!confirm(`Reset ${KID}’s stars to 0?`)) return;
     resetStars();
     settingsMsg.textContent = 'Stars reset.';
   });
@@ -229,14 +232,134 @@ async function manage() {
     <button class="btn danger" data-delete-pictures>Delete all pictures</button>`;
   async function showPictureCount() {
     const n = await countPictures();
-    picturesPanel.querySelector('[data-pictures]').textContent = `${n} saved picture${n === 1 ? '' : 's'} on this iPad (newest 50 are kept).`;
+    picturesPanel.querySelector('[data-pictures]').textContent = `${n} saved picture${n === 1 ? '' : 's'} for ${KID} (newest 50 are kept, and backed up to the computer).`;
   }
   showPictureCount();
   picturesPanel.querySelector('[data-delete-pictures]').addEventListener('click', async () => {
-    if (!confirm('Delete all of Lydia’s saved pictures? This can’t be undone.')) return;
+    if (!confirm(`Delete all of ${KID}’s saved pictures? This can’t be undone.`)) return;
     await deleteAllPictures();
     showPictureCount();
   });
+
+
+  // ---- Players ----
+  const AVATARS = ['🦄', '🐶', '🐱', '🐰', '🦖', '🐻', '🦊', '🐼', '🚀', '🌸', '⚽', '🦋'];
+  const playersPanel = el('section', 'panel');
+  function renderPlayers() {
+    const me = currentProfile().id;
+    playersPanel.innerHTML = `
+      <h2>👧 Players</h2>
+      <p>Each player has their own stars, stickers, heart words, pet, pictures and progress.
+         With more than one player, the home screen asks who's playing. This page shows <b></b>.</p>
+      <ul class="words" data-list></ul>
+      <form class="row" style="margin-top:12px">
+        <select aria-label="Picture" style="font-size:28px;padding:6px;border-radius:12px">${AVATARS.map((a) => `<option>${a}</option>`).join('')}</select>
+        <input type="text" placeholder="Name" aria-label="New player name" maxlength="20">
+        <button class="btn" type="submit">Add player</button>
+      </form>`;
+    playersPanel.querySelector('p b').textContent = currentProfile().name;
+    const list = playersPanel.querySelector('[data-list]');
+    for (const p of getProfiles()) {
+      const li = el('li');
+      li.innerHTML = `<span class="w" style="font-size:24px"></span><span class="s"></span>
+        <button class="btn light" data-switch>Switch</button>
+        <button class="btn light" data-rename>Rename</button>
+        ${p.id === 'main' ? '' : '<button class="x" aria-label="Remove player">×</button>'}`;
+      li.querySelector('.w').textContent = `${p.avatar} ${p.name}`;
+      li.querySelector('.s').textContent = p.id === me ? 'playing now' : '';
+      const sw = li.querySelector('[data-switch]');
+      if (p.id === me) sw.remove();
+      else sw.addEventListener('click', () => { setCurrentProfile(p.id); location.reload(); });
+      li.querySelector('[data-rename]').addEventListener('click', () => {
+        const name = prompt('New name:', p.name)?.trim();
+        if (!name) return;
+        updateProfile(p.id, { name: name.slice(0, 20) });
+        location.reload();
+      });
+      li.querySelector('.x')?.addEventListener('click', () => {
+        if (!confirm(`Remove ${p.name} and all of their progress?`)) return;
+        removeProfile(p.id);
+        location.reload();
+      });
+      list.appendChild(li);
+    }
+    playersPanel.querySelector('form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = playersPanel.querySelector('input').value.trim().slice(0, 20);
+      if (!name) return;
+      addProfile(name, playersPanel.querySelector('select').value);
+      renderPlayers();
+    });
+  }
+  renderPlayers();
+
+  // ---- Play time ----
+  const timePanel = el('section', 'panel');
+  const lim = getLimits();
+  const played = Math.round(playToday().ms / 60000);
+  const bedOptions = ['', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00'];
+  const show12 = (t) => {
+    const [h, m] = t.split(':').map(Number);
+    return `${h > 12 ? h - 12 : h}:${String(m).padStart(2, '0')} pm`;
+  };
+  timePanel.innerHTML = `
+    <h2>⏰ Play time</h2>
+    <p>When time is up, Sparkle gets sleepy and the games rest. A grown-up can add 15 minutes
+       (or end the limit for today) by answering a times-table question.</p>
+    <div class="row">
+      <label>Daily limit
+        <select data-minutes style="font:inherit;padding:8px;border-radius:10px">
+          ${[0, 15, 20, 30, 45, 60, 90].map((m) => `<option value="${m}" ${lim.minutes === m ? 'selected' : ''}>${m ? `${m} minutes` : 'No limit'}</option>`).join('')}
+        </select></label>
+      <label>Bedtime
+        <select data-bedtime style="font:inherit;padding:8px;border-radius:10px">
+          ${bedOptions.map((t) => `<option value="${t}" ${lim.bedtime === t ? 'selected' : ''}>${t ? show12(t) : 'Off'}</option>`).join('')}
+        </select></label>
+    </div>
+    <p>Played today on this iPad: <b>${played} minute${played === 1 ? '' : 's'}</b></p>`;
+  timePanel.querySelector('[data-minutes]').addEventListener('change', (e) => setLimits({ minutes: Number(e.target.value) }));
+  timePanel.querySelector('[data-bedtime]').addEventListener('change', (e) => setLimits({ bedtime: e.target.value }));
+
+  // ---- Backup to the computer ----
+  const syncPanel = el('section', 'panel');
+  syncPanel.innerHTML = `
+    <h2>☁️ Backup</h2>
+    <p>Stars, stickers, heart words, pets, settings and pictures are copied to the computer running
+       the games. On a new iPad (or a new address, or after clearing Safari) they come back by themselves.</p>
+    <p data-sync-status>Checking…</p>
+    <button class="btn" data-sync>Back up now</button>`;
+  async function showSync() {
+    await syncNow();
+    const st = syncStatus();
+    syncPanel.querySelector('[data-sync-status]').textContent = st.online
+      ? `✅ Backed up to the computer${st.last ? ` at ${new Date(st.last).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}.`
+      : `⚠️ Can't reach the backup service (${st.error}). Check that the "save" container is running.`;
+  }
+  showSync();
+  syncPanel.querySelector('[data-sync]').addEventListener('click', showSync);
+
+  // ---- Microphone (secure address) ----
+  const micPanel = el('section', 'panel');
+  const host = location.hostname;
+  const secureUrl = `https://${host}:2022/`;
+  micPanel.innerHTML = `
+    <h2>🎤 Microphone</h2>
+    <p>Heart Words → <b>Say It!</b> records ${KID} reading a word. Safari only allows the microphone on a
+       secure (https) address, which needs a one-time setup:</p>
+    <p data-secure></p>
+    <ol style="color:var(--muted);line-height:1.5">
+      <li>On the computer, put its address in a file named <code>.env</code> next to <code>docker-compose.yml</code>:
+          <code>HOST_NAMES=${host}</code>, then run <code>docker compose up -d --build</code>.</li>
+      <li>On the iPad, open <a href="/lydias-games-ca.crt"><b>this certificate</b></a> and tap <b>Allow</b>.</li>
+      <li>iPad <b>Settings → Profile Downloaded → Install</b>.</li>
+      <li>iPad <b>Settings → General → About → Certificate Trust Settings</b> → turn on <b>Lydia's Games Home CA</b>.</li>
+      <li>Open <a data-secure-link></a> and use <b>Share → Add to Home Screen</b>. Progress comes along through the backup.</li>
+    </ol>`;
+  micPanel.querySelector('[data-secure-link]').href = secureUrl;
+  micPanel.querySelector('[data-secure-link]').textContent = secureUrl;
+  micPanel.querySelector('[data-secure]').textContent = window.isSecureContext && location.protocol === 'https:'
+    ? '✅ You are on the secure address. The microphone can be used.'
+    : 'ℹ️ This is the regular address, so Say It! is turned off here.';
 
   // ---- Progress ----
   const progressPanel = el('section', 'panel');
@@ -292,7 +415,7 @@ async function manage() {
   });
   progressPanel.appendChild(info);
 
-  main.append(progressPanel, addPanel, removedPanel, voicePanel, picturesPanel, backupPanel, settingsPanel);
+  main.append(playersPanel, progressPanel, addPanel, removedPanel, timePanel, syncPanel, voicePanel, micPanel, picturesPanel, backupPanel, settingsPanel);
 
   async function renderList() {
     const list = addPanel.querySelector('.words');

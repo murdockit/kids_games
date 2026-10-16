@@ -1,5 +1,5 @@
 // Shapes, Colors & Patterns.
-import { topBar, modePicker, pick, sample, shuffle, randInt } from '../common.js';
+import { topBar, modePicker, pick, sample, shuffle, randInt, KID } from '../common.js';
 import { runQuiz } from '../quiz.js';
 
 const main = document.getElementById('app');
@@ -122,7 +122,7 @@ function patterns() {
         show: shown.map((l) => draw(letterToPart[l])).join('') + '<span style="font-size:.9em">❓</span>',
         choices: shuffle(options).map((p) => ({ value: p, html: draw(p), label: p })),
         answer: letterToPart[next],
-        praise: pick(['Yes! You found the pattern!', 'Pattern power!', 'Great job, Lydia!']),
+        praise: pick(['Yes! You found the pattern!', 'Pattern power!', `Great job, ${KID}!`]),
       };
     },
     onExit: showPicker,

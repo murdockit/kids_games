@@ -2,25 +2,12 @@
 import { earnedStar, takeNewRewards } from './rewards.js';
 import { setTrack, startMusic, duck, preload } from './music.js';
 
-export const KID = 'Lydia';
+import { load, save, currentProfile } from './storage.js';
+import './sync.js'; // backs progress up to the computer
+export { load, save };
 
-// ---------- Storage (localStorage can throw or be empty; never let that break a game) ----------
-export function load(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw == null ? fallback : JSON.parse(raw);
-  } catch {
-    return fallback;
-  }
-}
-
-export function save(key, value) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    /* storage unavailable: progress just isn't remembered */
-  }
-}
+// Who's playing (Lydia, unless a grown-up added more players).
+export const KID = currentProfile().name;
 
 const SETTINGS_KEY = 'lg.settings';
 export function getSettings() {
@@ -240,6 +227,9 @@ export function say(text, { ipad } = {}) {
     if (id === speechId) duck(false);
   });
 }
+
+// Play-time limit and bedtime (not on the Grown-ups screen).
+if (!location.pathname.endsWith('grownups.html')) import('./limits.js').then((m) => m.watchPlayTime(say));
 
 // ---------- Sound effects (tiny Web Audio tones; nothing harsh) ----------
 let audioCtx = null;

@@ -1,5 +1,10 @@
 // "My Pictures": saved drawings, kept on this iPad in IndexedDB (PNG data is too big for localStorage).
-// Each picture: { id, created, pageId, thumb, image, paint, width, height }
+// Each picture: { id, profile, created, pageId, thumb, image, paint, width, height }
+// Pictures belong to the player who drew them, and are backed up to the computer (sync.js).
+import { currentProfile } from './storage.js';
+
+const mine = (p) => (p.profile || 'main') === currentProfile().id;
+const backup = () => import('./sync.js');
 //   thumb/image are data URLs of the finished picture; paint is the paint layer alone, for "keep drawing".
 const DB_NAME = 'lydias-games';
 const STORE = 'pictures';
@@ -30,13 +35,22 @@ async function run(mode, fn) {
   });
 }
 
-export async function listPictures() {
+// Every player's pictures (for the backup).
+export async function allPictures() {
   try {
-    const all = (await run('readonly', (s) => s.getAll())) || [];
-    return all.sort((a, b) => b.created - a.created);
+    return (await run('readonly', (s) => s.getAll())) || [];
   } catch {
     return [];
   }
+}
+
+// Puts back a picture from the backup.
+export async function putPicture(record) {
+  await run('readwrite', (s) => s.put(record));
+}
+
+export async function listPictures() {
+  return (await allPictures()).filter(mine).sort((a, b) => b.created - a.created);
 }
 
 export async function getPicture(id) {
@@ -49,8 +63,9 @@ export async function getPicture(id) {
 
 // Saves (or updates, when picture.id is set) and trims to the newest KEEP pictures.
 export async function savePicture(picture) {
-  const record = { ...picture, id: picture.id || Date.now(), created: Date.now() };
+  const record = { ...picture, id: picture.id || Date.now(), created: Date.now(), profile: currentProfile().id };
   await run('readwrite', (s) => s.put(record));
+  backup().then((m) => m.uploadPicture(record)).catch(() => {});
   const all = await listPictures();
   for (const old of all.slice(KEEP)) await deletePicture(old.id);
   return record.id;
@@ -62,20 +77,14 @@ export async function deletePicture(id) {
   } catch {
     /* already gone */
   }
+  backup().then((m) => m.forgetPicture(id)).catch(() => {});
 }
 
 export async function countPictures() {
-  try {
-    return (await run('readonly', (s) => s.count())) || 0;
-  } catch {
-    return 0;
-  }
+  return (await listPictures()).length;
 }
 
+// Deletes this player's pictures.
 export async function deleteAllPictures() {
-  try {
-    await run('readwrite', (s) => s.clear());
-  } catch {
-    /* nothing to clear */
-  }
+  for (const p of await listPictures()) await deletePicture(p.id);
 }
