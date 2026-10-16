@@ -96,7 +96,7 @@ async function play(name) {
     source.start();
     gain.gain.cancelScheduledValues(ac.currentTime);
     gain.gain.setValueAtTime(0, ac.currentTime);
-    gain.gain.linearRampToValueAtTime(VOLUME, ac.currentTime + 1.5); // fade in
+    gain.gain.linearRampToValueAtTime(hushed ? 0 : VOLUME, ac.currentTime + 1.5); // fade in
   } catch {
     current = null;
   }
@@ -115,9 +115,22 @@ export function startMusic() {
 }
 
 // Turn the music down while someone is speaking, then back up.
-export function duck(on) {
+let ducked = false;
+let hushed = false;
+function level() {
   if (!gain || !source) return;
-  gain.gain.setTargetAtTime(on ? DUCKED : VOLUME, ac.currentTime, on ? 0.08 : 0.4);
+  const v = hushed ? 0 : ducked ? DUCKED : VOLUME;
+  gain.gain.setTargetAtTime(v, ac.currentTime, v < VOLUME ? 0.08 : 0.4);
+}
+export function duck(on) {
+  ducked = on;
+  level();
+}
+
+// Silence the music while an activity makes its own (Music Maker, bedtime).
+export function hush(on) {
+  hushed = on;
+  level();
 }
 
 // Load the track early (no sound) so it can start instantly on the first tap.

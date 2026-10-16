@@ -15,6 +15,8 @@ export const GAME_NAMES = {
   salon: 'Hair Salon',
   reading: 'Reading',
   tracing: 'Tracing',
+  pet: 'My Pet',
+  stories: 'Story Time',
 };
 
 function read() {

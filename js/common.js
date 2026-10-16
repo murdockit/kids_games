@@ -830,3 +830,6 @@ export function el(tag, className, text) {
   if (text != null) node.textContent = text;
   return node;
 }
+
+// Raw sound building blocks, for instruments (Music Maker) that always play.
+export { tone, slide, noise };
