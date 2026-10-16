@@ -22,6 +22,8 @@ const showPicker = modePicker({
     { emoji: '🔢', name: 'How Many?', color: 'yellow', start: howMany },
     { emoji: '⚖️', name: 'Which Has More?', color: 'green', start: whichMore },
     { emoji: '➕', name: 'Add & Take Away', color: 'blue', start: addTake },
+    { emoji: '🔟', name: 'Ten Frame', color: 'purple', start: tenFrame },
+    { emoji: '🐰', name: 'Bunny Hop', color: 'pink', start: bunnyHop },
   ],
 });
 
@@ -142,6 +144,96 @@ function addTake() {
         praise: `Yes! ${total} take away ${gone} is ${total - gone}!`,
       };
     },
+    onExit: showPicker,
+  });
+}
+
+// A ten frame: two rows of five boxes, the first n filled with dots.
+function frame(n, color) {
+  const box = el('div', 'ten-frame');
+  for (let i = 0; i < 10; i++) {
+    const cell = el('span', i < n ? 'on' : '');
+    if (i < n) {
+      cell.style.setProperty('--dot', color);
+      cell.style.animationDelay = `${i * 0.06}s`;
+    }
+    box.appendChild(cell);
+  }
+  return box;
+}
+
+// "How many dots?" and "How many more make 10?", taking turns.
+function tenFrame() {
+  let last = 0;
+  runQuiz({
+    main,
+    bar,
+    makeQuestion: (index) => {
+      let n;
+      do n = randInt(index % 2 ? 1 : 2, 9);
+      while (n === last);
+      last = n;
+      const color = pick(['#ff6b8b', '#4d96ff', '#4cc261', '#a66bff', '#ff8c42']);
+      if (index % 2 === 0) {
+        return {
+          say: 'How many dots?',
+          text: 'How many dots?',
+          show: frame(n, color),
+          choices: numberChoices(n, { min: 1, max: 10 }).map(numberChoice),
+          answer: n,
+          praise: `Yes! ${n}!`,
+        };
+      }
+      return {
+        say: `How many more dots make ten?`,
+        text: 'How many more make 10? 🔟',
+        show: frame(n, color),
+        choices: numberChoices(10 - n, { min: 1, max: 9 }).map(numberChoice),
+        answer: 10 - n,
+        praise: `Yes! ${n} and ${10 - n} make ten!`,
+      };
+    },
+    onExit: showPicker,
+  });
+}
+
+// The bunny sits on a number line and hops forward (or back). Where does it land?
+function bunnyHop() {
+  runQuiz({
+    main,
+    bar,
+    makeQuestion: () => {
+      const forward = Math.random() < 0.7;
+      const hops = randInt(1, 4);
+      const start = forward ? randInt(0, 10 - hops) : randInt(hops, 10);
+      const end = forward ? start + hops : start - hops;
+      const line = el('div', 'number-line');
+      line.style.setProperty('--n', 11);
+      for (let i = 0; i <= 10; i++) line.appendChild(el('span', 'tick', String(i)));
+      // Little arcs show each hop to count along.
+      for (let h = 0; h < hops; h++) {
+        const arc = el('span', 'hop-arc');
+        const from = forward ? start + h : start - h - 1;
+        arc.style.left = `calc(${from} * var(--step) + var(--step) / 2)`;
+        line.appendChild(arc);
+      }
+      const bunny = el('span', 'bunny', '🐰');
+      bunny.style.left = `calc(${start} * var(--step) + var(--step) / 2)`;
+      line.appendChild(bunny);
+      return {
+        say: `Bunny is on ${start}. Bunny hops ${hops} ${forward ? 'more' : 'back'}. Where does bunny land?`,
+        text: `${start} ${forward ? '+' : '−'} ${hops} = ?`,
+        show: line,
+        choices: numberChoices(end, { min: 0, max: 10 }).map(numberChoice),
+        answer: end,
+        praise: `Yes! ${start} ${forward ? 'plus' : 'take away'} ${hops} is ${end}!`,
+        land: () => {
+          bunny.style.left = `calc(${end} * var(--step) + var(--step) / 2)`;
+          sfx('boing');
+        },
+      };
+    },
+    onAnswer: (q, right) => right && q.land?.(),
     onExit: showPicker,
   });
 }

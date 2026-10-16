@@ -13,6 +13,8 @@ export const GAME_NAMES = {
   shapes: 'Shapes & Colors',
   play: 'Free Play',
   salon: 'Hair Salon',
+  reading: 'Reading',
+  tracing: 'Tracing',
 };
 
 function read() {

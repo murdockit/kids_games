@@ -224,15 +224,18 @@ function sayIpad(text) {
 }
 
 // Speaks text and resolves when finished. Starting a new phrase stops the previous one.
-export function say(text) {
+// `ipad` is what the iPad's own voice should say instead, for text only the natural voice
+// understands (letter sounds written as phonemes, like "[[ kə ]]").
+export function say(text, { ipad } = {}) {
   stopSpeech();
   if (!text || !getSettings().speech) return Promise.resolve();
   const id = speechId;
   duck(true); // music dips while someone is talking
+  const plain = ipad ?? text;
   const done = current?.natural && ctx()
     ? // If the voice container is unreachable, say it with the iPad's voice instead.
-      sayNatural(text, id).catch(() => (id === speechId ? sayIpad(text) : undefined))
-    : sayIpad(text);
+      sayNatural(text, id).catch(() => (id === speechId ? sayIpad(plain) : undefined))
+    : sayIpad(plain);
   return done.finally(() => {
     if (id === speechId) duck(false);
   });
