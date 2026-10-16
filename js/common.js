@@ -261,9 +261,55 @@ function tone(freq, start, dur, type = 'sine', gain = 0.18) {
   osc.stop(t + dur + 0.05);
 }
 
+// Filtered white noise, for snips, sprays and whooshes.
+let noiseBuffer = null;
+function noise(start, dur, { type = 'bandpass', freq = 2000, q = 1, gain = 0.15 } = {}) {
+  const ac = ctx();
+  if (!ac) return;
+  if (!noiseBuffer) {
+    noiseBuffer = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+  }
+  const t = ac.currentTime + start;
+  const src = ac.createBufferSource();
+  src.buffer = noiseBuffer;
+  const filter = ac.createBiquadFilter();
+  filter.type = type;
+  filter.frequency.value = freq;
+  filter.Q.value = q;
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(gain, t + Math.min(0.02, dur / 3));
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  src.connect(filter).connect(g).connect(ac.destination);
+  src.start(t, Math.random() * 0.5);
+  src.stop(t + dur + 0.05);
+}
+
 export function sfx(kind) {
   if (!getSettings().sounds) return;
   switch (kind) {
+    case 'snip':
+      noise(0, 0.05, { type: 'highpass', freq: 3500, gain: 0.25 });
+      noise(0.07, 0.05, { type: 'highpass', freq: 4500, gain: 0.2 });
+      break;
+    case 'spray':
+      noise(0, 0.3, { freq: 5000, q: 0.7, gain: 0.12 });
+      break;
+    case 'whoosh':
+      noise(0, 0.35, { type: 'lowpass', freq: 900, gain: 0.18 });
+      break;
+    case 'splash':
+      noise(0, 0.25, { freq: 1500, q: 0.5, gain: 0.12 });
+      break;
+    case 'bubble':
+      tone(randInt(700, 1200), 0, 0.06, 'sine', 0.12);
+      break;
+    case 'camera':
+      noise(0, 0.04, { type: 'highpass', freq: 2500, gain: 0.3 });
+      noise(0.09, 0.06, { type: 'highpass', freq: 2000, gain: 0.25 });
+      break;
     case 'good':
       tone(660, 0, 0.18);
       tone(880, 0.1, 0.25);
