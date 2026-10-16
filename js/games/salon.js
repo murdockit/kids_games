@@ -46,6 +46,30 @@ const LINES = {
   sticker: ['So fancy!', 'I look great!'],
 };
 
+// What each tool says when picked: its name and how to use it, since she can't read the buttons.
+const HOWTO = {
+  scissors: 'Scissors! Swipe across the hair to cut it.',
+  comb: 'Comb! Drag the hair where you want it.',
+  grow: 'Grow potion! Rub it on the hair to make it longer.',
+  dryer: 'Hair dryer! Hold it near the hair.',
+  curl: 'Curler! Rub it on the hair to make curls.',
+  straight: 'Straightener! Rub it on curly hair.',
+  shampoo: 'Shampoo! Rub it on to make bubbles.',
+  water: 'Water! Rinse off the bubbles.',
+};
+// Gentle ideas if she stops for a while.
+const HINTS = [
+  ['scissors', 'Try the scissors! Swipe across the hair.'],
+  ['grow', 'Try the grow potion! Rub it on the hair.'],
+  ['color', 'Pick a fun hair color!'],
+  ['shampoo', 'Make some bubbles with the shampoo!'],
+  ['curl', 'Make curls with the curler!'],
+  ['dryer', 'Try the hair dryer!'],
+  ['sticker', 'Add a sticker!'],
+  ['photo', 'Take a picture of your new hairdo!'],
+];
+const CURSOR = { scissors: '✂️', comb: '🪮', grow: '🧪', dryer: '💨', curl: '🌀', straight: '〰️', shampoo: '🫧', water: '💧' };
+
 // ---------- Hair ----------
 // Point on the head outline at angle a (radians; -π/2 is the top), pushed in a little.
 const onHead = (a, inset = 0.93) => ({ x: HEAD.x + Math.cos(a) * HEAD.rx * inset, y: HEAD.y + Math.sin(a) * HEAD.ry * inset });
@@ -514,6 +538,7 @@ function salon(friend) {
 
   // --- tool buttons ---
   const btns = {};
+  const actionBtns = {};
   function addTool(id, emoji, label, onPick) {
     const b = el('button', 'tool-btn salon-tool');
     b.innerHTML = emoji;
@@ -528,9 +553,11 @@ function salon(friend) {
   }
   function setTool(id, label) {
     tool = id;
+    used.add(id);
     Object.entries(btns).forEach(([k, b]) => b.classList.toggle('on', k === id));
-    if (label) say(label);
+    if (label) say(HOWTO[id] || label);
   }
+  const used = new Set();
   addTool('scissors', '✂️', 'Scissors');
   addTool('comb', '🪮', 'Comb');
   addTool('grow', '🧪', 'Hair grow potion');
@@ -542,11 +569,13 @@ function salon(friend) {
   addTool('water', '🚿', 'Water');
   addTool('sticker', '🎀', 'Stickers', openStickers);
   const photoBtn = addTool('photo', '📸', 'Take a picture', takePhoto);
+  addTool('undo', '↩️', 'Undo', undoLast);
   addTool('reset', '🔄', 'New hair', resetHair);
-  photoBtn.classList.add('action');
-  btns.reset.classList.add('action');
-  delete btns.photo;
-  delete btns.reset;
+  for (const id of ['photo', 'undo', 'reset']) {
+    btns[id].classList.add('action');
+    actionBtns[id] = btns[id];
+    delete btns[id];
+  }
   setTool('scissors');
 
   function trayOf(title, items, onPick) {
@@ -606,14 +635,38 @@ function salon(friend) {
     });
   }
 
+  // Undo: a snapshot of the hair before each touch, so a surprise haircut can be taken back.
+  const history = [];
+  const snapshot = () => ({
+    strands: st.strands.map((s) => ({ ...s, pts: s.pts.map((q) => ({ ...q })), bends: s.bends.slice() })),
+    stickers: st.stickers.map((x) => ({ ...x })),
+    bubbles: st.bubbles.map((x) => ({ ...x })),
+  });
+  function remember() {
+    history.push(snapshot());
+    if (history.length > 15) history.shift();
+  }
+  function undoLast() {
+    const prev = history.pop();
+    if (!prev) {
+      say('Nothing to undo.');
+      return;
+    }
+    Object.assign(st, prev);
+    st.falling = [];
+    sfx('pop');
+  }
+
   async function resetHair() {
     if (!(await askYesNo('Start over with new hair?'))) return;
+    remember();
     const fresh = newState(friend);
     Object.assign(st, fresh);
     say(pick(LINES.hello(friend)));
   }
 
   async function takePhoto() {
+    used.add('photo');
     sfx('camera');
     const flash = el('div', 'flash');
     document.body.appendChild(flash);
@@ -666,14 +719,21 @@ function salon(friend) {
   let down = false;
   let last = null;
   let dragSticker = null;
+  let finger = null; // only one finger at a time; a resting palm or second finger is ignored
+  let cursorUntil = 0;
+  let lastTouch = performance.now();
   const toScene = (e) => {
     const r = canvas.getBoundingClientRect();
     return { x: (e.clientX - r.left - ox) / scale, y: (e.clientY - r.top - oy) / scale };
   };
 
   canvas.addEventListener('pointerdown', (e) => {
+    if (finger !== null) return;
+    finger = e.pointerId;
     canvas.setPointerCapture(e.pointerId);
     down = true;
+    lastTouch = performance.now();
+    remember();
     const p = toScene(e);
     last = p;
     face.look = p;
@@ -692,9 +752,11 @@ function salon(friend) {
     apply(p, p);
   });
   canvas.addEventListener('pointermove', (e) => {
+    if (finger !== null && e.pointerId !== finger) return;
     const p = toScene(e);
     face.look = p;
     if (!down) return;
+    lastTouch = performance.now();
     if (dragSticker) {
       dragSticker.x = p.x;
       dragSticker.y = p.y;
@@ -703,8 +765,11 @@ function salon(friend) {
     }
     last = p;
   });
-  const up = () => {
+  const up = (e) => {
+    if (e.pointerId !== finger) return;
+    finger = null;
     down = false;
+    cursorUntil = performance.now() + 400;
     // A sticker dragged off the picture goes away.
     if (dragSticker && (dragSticker.x < 0 || dragSticker.x > W || dragSticker.y < 0 || dragSticker.y > H)) {
       st.stickers = st.stickers.filter((s) => s !== dragSticker);
@@ -726,12 +791,13 @@ function salon(friend) {
   };
   const near = (q, p, r) => (q.x - p.x) ** 2 + (q.y - p.y) ** 2 < r * r;
 
-  function segHit(a, b, c, d) {
-    const r = (b.x - a.x) * (d.y - c.y) - (b.y - a.y) * (d.x - c.x);
-    if (Math.abs(r) < 1e-9) return false;
-    const t = ((c.x - a.x) * (d.y - c.y) - (c.y - a.y) * (d.x - c.x)) / r;
-    const u = ((c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x)) / r;
-    return t >= 0 && t <= 1 && u >= 0 && u <= 1;
+  // Distance from point q to the finger's path a→b (just a point for a tap).
+  function distToPath(q, a, b) {
+    const vx = b.x - a.x;
+    const vy = b.y - a.y;
+    const len2 = vx * vx + vy * vy;
+    const t = len2 ? Math.max(0, Math.min(1, ((q.x - a.x) * vx + (q.y - a.y) * vy) / len2)) : 0;
+    return Math.hypot(q.x - (a.x + t * vx), q.y - (a.y + t * vy));
   }
 
   function apply(from, p) {
@@ -742,7 +808,8 @@ function salon(friend) {
         let cut = false;
         for (const s of st.strands) {
           for (let i = 1; i < s.pts.length; i++) {
-            if (segHit(from, p, s.pts[i - 1], s.pts[i]) || (i > 1 && near(s.pts[i], p, 10) && dx === 0 && dy === 0)) {
+            // Forgiving for little fingers: anything close to where she swiped (or tapped) gets cut.
+            if (distToPath(s.pts[i], from, p) < 18) {
               const piece = s.pts.slice(i - 1).map((q) => ({ ...q, px: q.x - (Math.random() - 0.5) * 3, py: q.y - 1 }));
               s.pts = s.pts.slice(0, Math.max(1, i));
               if (piece.length > 1) st.falling.push({ pts: piece, width: s.width, wet: s.wet, life: 70 });
@@ -868,6 +935,21 @@ function salon(friend) {
     }
   }
 
+  // --- idle hints ---
+  let hintIndex = 0;
+  function giveHint() {
+    lastTouch = performance.now() + 10000; // next hint after ~25 seconds
+    const fresh = HINTS.filter(([id]) => !used.has(id));
+    const [id, text] = fresh.length ? fresh[0] : HINTS[hintIndex++ % HINTS.length];
+    const b = btns[id] || actionBtns[id];
+    say(text);
+    if (b) {
+      b.classList.remove('hint');
+      void b.offsetWidth;
+      b.classList.add('hint');
+    }
+  }
+
   // --- animation loop ---
   let frame;
   let blinkAt = performance.now() + 2500;
@@ -898,7 +980,19 @@ function salon(friend) {
     g.roundRect ? g.roundRect(0, 0, W, H, 36) : g.rect(0, 0, W, H);
     g.clip();
     drawFriend(g, st, face);
+    // Show the tool under her finger (a little above it, so the finger doesn't hide it).
+    if ((down || now < cursorUntil) && last && tool !== 'sticker') {
+      if (tool === 'color') {
+        ellipse(g, last.x, last.y - 55, 22, 22, color.hex === 'rainbow' ? `hsl(${hue}, 85%, 55%)` : color.hex, '#fff', 5);
+      } else if (CURSOR[tool]) {
+        g.font = '56px serif';
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
+        g.fillText(CURSOR[tool], last.x, last.y - 60);
+      }
+    }
     g.restore();
+    if (now - lastTouch > 15000 && !document.querySelector('.overlay')) giveHint();
     frame = requestAnimationFrame(loop);
   }
   frame = requestAnimationFrame(loop);

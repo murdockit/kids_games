@@ -195,6 +195,8 @@ main {
 .choice:active { transform: translateY(4px); }
 .choice.right { background: #dff7e4; outline: 6px solid var(--good); }
 .choice.wrong { opacity: .45; }
+.choice.help { animation: help-bounce .7s ease infinite; outline: 6px dashed var(--yellow); outline-offset: 4px; }
+@keyframes help-bounce { 50% { transform: translateY(-10px) scale(1.06); } }
 .choice svg { width: 96px; height: 96px; }
 .prompt-show svg { width: 80px; height: 80px; }
 
@@ -422,14 +424,20 @@ main.salon {
 .salon-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
 .salon-tools {
   display: grid;
-  grid-template-columns: repeat(2, 64px);
-  gap: 10px;
+  grid-template-columns: repeat(2, 78px);
+  gap: 12px;
   align-content: center;
 }
-.salon-tools .tool-btn { width: 64px; height: 64px; font-size: 32px; }
+.salon-tools .tool-btn { width: 78px; height: 78px; font-size: 40px; transition: transform .15s; }
+.salon-tools .tool-btn.on { outline: 6px solid var(--pink); outline-offset: 3px; transform: scale(1.1); }
+.salon-tools .tool-btn.hint { animation: hint .55s ease 4; }
+@keyframes hint {
+  0%, 100% { transform: translateY(0) scale(1); }
+  40% { transform: translateY(-14px) scale(1.15); }
+}
 @media (orientation: portrait) {
   main.salon { flex-direction: column; }
-  .salon-tools { grid-template-columns: repeat(6, 64px); justify-content: center; }
+  .salon-tools { grid-template-columns: repeat(7, 78px); justify-content: center; gap: 10px; }
 }
 .flash {
   position: fixed;
