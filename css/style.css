@@ -1,4 +1,9 @@
 /* Lydia's Games — shared styles. Built for small fingers on an iPad. */
+/* Fredoka, a rounded friendly font (SIL Open Font License, see fonts/OFL.txt). Bundled so it works offline. */
+@font-face { font-family: 'Fredoka'; src: url('../fonts/fredoka-500.woff2') format('woff2'); font-weight: 400 500; font-display: swap; }
+@font-face { font-family: 'Fredoka'; src: url('../fonts/fredoka-600.woff2') format('woff2'); font-weight: 600; font-display: swap; }
+@font-face { font-family: 'Fredoka'; src: url('../fonts/fredoka-700.woff2') format('woff2'); font-weight: 700 900; font-display: swap; }
+
 :root {
   color-scheme: light;
   --bg: #fff7e8;
@@ -14,7 +19,7 @@
   --good: #3fbf5f;
   --radius: 28px;
   --shadow: 0 6px 0 rgba(43, 45, 66, 0.12), 0 10px 24px rgba(43, 45, 66, 0.10);
-  --font: ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", "Nunito", system-ui, sans-serif;
+  --font: "Fredoka", ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", system-ui, sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -448,3 +453,171 @@ main.salon {
   animation: flash .45s ease-out forwards;
 }
 @keyframes flash { from { opacity: 1; } to { opacity: 0; } }
+
+
+/* =================== Polish: motion, sky, mascot, celebrations =================== */
+
+/* Pages slide in, and fade out when leaving */
+main, .topbar { animation: page-in .45s cubic-bezier(.2,.9,.3,1.2) both; }
+.topbar { animation-duration: .3s; }
+@keyframes page-in { from { opacity: 0; transform: translateY(18px) scale(.98); } to { opacity: 1; transform: none; } }
+body.leaving main, body.leaving .topbar, body.leaving footer { opacity: 0; transform: scale(.97); transition: opacity .18s, transform .18s; }
+
+/* Springy buttons: squish on press, bounce back */
+button, .tile { transition: transform .18s cubic-bezier(.34,1.8,.5,1), box-shadow .18s; }
+button:active, .tile:active { transform: scale(.92) !important; transition-duration: .06s; }
+
+/* Sky: drifting clouds and rising bubbles behind everything */
+html { background: linear-gradient(180deg, #e0f2fe 0%, #fff7e8 45%, #fff7e8 100%) fixed; }
+body { background: transparent; }
+.sky { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.cloud {
+  position: absolute;
+  left: -220px;
+  width: 180px;
+  height: 56px;
+  border-radius: 40px;
+  background: #fff;
+  opacity: .85;
+  box-shadow: 40px -22px 0 6px #fff, 90px -6px 0 0 #fff;
+  animation: drift linear infinite;
+}
+@keyframes drift { to { left: 110%; } }
+.bubble-bg {
+  position: absolute;
+  bottom: -60px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #fff 0 15%, rgba(186, 230, 253, .55) 45%, rgba(255,255,255,.15) 100%);
+  border: 2px solid rgba(255,255,255,.7);
+  animation: rise linear infinite;
+}
+@keyframes rise { to { transform: translateY(-115vh) translateX(30px); } }
+
+/* Home tiles gently float, each a little out of step */
+.tiles .tile { animation: float 4s ease-in-out infinite; }
+.tiles .tile:nth-child(2) { animation-delay: -.7s; }
+.tiles .tile:nth-child(3) { animation-delay: -1.4s; }
+.tiles .tile:nth-child(4) { animation-delay: -2.1s; }
+.tiles .tile:nth-child(5) { animation-delay: -2.8s; }
+.tiles .tile:nth-child(6) { animation-delay: -3.5s; }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+.tile .emoji { display: inline-block; transition: transform .3s; }
+.tile:hover .emoji { transform: rotate(-8deg) scale(1.08); }
+.tile { position: relative; overflow: hidden; }
+.tile::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,.45) 50%, transparent 65%);
+  transform: translateX(-120%);
+  animation: shine 6s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes shine { 0%, 70% { transform: translateX(-120%); } 85%, 100% { transform: translateX(120%); } }
+
+/* Sparkle the unicorn */
+.mascot { background: none; padding: 0; border: 0; display: block; flex: none; }
+.mascot svg { width: 100%; height: auto; overflow: visible; display: block; }
+.unicorn .u-head { transform-origin: 120px 120px; animation: u-nod 3.2s ease-in-out infinite; }
+.unicorn .u-tail { transform-origin: 56px 130px; animation: u-swish 2.4s ease-in-out infinite; }
+.unicorn .u-eye { transform-origin: 146px 74px; animation: u-blink 4.5s infinite; }
+.unicorn .u-sparkles path { transform-box: fill-box; transform-origin: center; animation: twinkle 1.8s ease-in-out infinite; }
+.unicorn .u-sparkles .s2 { animation-delay: -.6s; }
+.unicorn .u-sparkles .s3 { animation-delay: -1.2s; }
+.mascot { animation: u-hop 3.2s ease-in-out infinite; }
+.mascot.jump { animation: u-jump .7s cubic-bezier(.3,1.6,.5,1); }
+.mascot.cheering { animation: u-jump .8s cubic-bezier(.3,1.6,.5,1) infinite; }
+@keyframes u-nod { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-5deg); } }
+@keyframes u-swish { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(12deg); } }
+@keyframes u-blink { 0%, 94%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.1); } }
+@keyframes twinkle { 0%, 100% { transform: scale(.6); opacity: .4; } 50% { transform: scale(1.2); opacity: 1; } }
+@keyframes u-hop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes u-jump { 0% { transform: translateY(0) scale(1, 1); } 25% { transform: translateY(0) scale(1.08, .9); } 55% { transform: translateY(-38px) scale(.95, 1.08) rotate(-4deg); } 100% { transform: translateY(0) scale(1); } }
+
+/* Home: unicorn + speech bubble */
+.home-hero { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; }
+.speech {
+  position: relative;
+  background: #fff;
+  border-radius: 28px;
+  padding: 16px 26px;
+  box-shadow: var(--shadow);
+  font-size: clamp(26px, 4.5vw, 42px);
+  font-weight: 700;
+  animation: pop-in .5s .2s cubic-bezier(.3,1.6,.5,1) both;
+}
+.speech::before {
+  content: '';
+  position: absolute;
+  left: -16px;
+  top: 50%;
+  margin-top: -14px;
+  border: 14px solid transparent;
+  border-right-color: #fff;
+  border-left: 0;
+}
+
+/* Celebrations */
+.done-row { display: flex; align-items: flex-end; justify-content: center; gap: 10px; }
+.done-row .mascot { width: 170px; }
+.done-screen .big { animation: spin-in .8s cubic-bezier(.3,1.6,.5,1) both; }
+@keyframes spin-in { from { transform: scale(0) rotate(-200deg); } to { transform: none; } }
+.fireworks { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 55; }
+.balloons { position: fixed; inset: 0; pointer-events: none; z-index: 56; overflow: hidden; }
+.balloon {
+  position: absolute;
+  bottom: -120px;
+  font-size: 84px;
+  background: none;
+  padding: 0;
+  pointer-events: auto;
+  animation: balloon-up linear forwards;
+}
+@keyframes balloon-up {
+  0% { transform: translateY(0) translateX(0); }
+  50% { transform: translateY(-60vh) translateX(20px); }
+  100% { transform: translateY(-125vh) translateX(-10px); }
+}
+.flying-star {
+  position: fixed;
+  z-index: 80;
+  font-size: 120px;
+  line-height: 1;
+  margin: -60px 0 0 -60px;
+  pointer-events: none;
+  transition: transform .8s cubic-bezier(.5,-0.3,.4,1);
+}
+.burst {
+  position: fixed;
+  z-index: 81;
+  font-size: 28px;
+  pointer-events: none;
+  margin: -14px 0 0 -14px;
+  animation: burst .7s ease-out forwards;
+}
+@keyframes burst { to { transform: translate(var(--dx), var(--dy)) scale(.4); opacity: 0; } }
+.stars.bump { animation: star-bump .6s cubic-bezier(.3,1.8,.5,1); }
+@keyframes star-bump { 40% { transform: scale(1.35) rotate(-6deg); background: #fef3c7; } }
+
+/* Salon: happy wiggle after a photo, and the instant-camera photo */
+.salon-stage.happy-wiggle { animation: happy-wiggle .7s ease 2; }
+@keyframes happy-wiggle {
+  25% { transform: rotate(-2deg) scale(1.02); }
+  75% { transform: rotate(2deg) scale(1.02); }
+}
+.photo-reveal { flex-direction: column; gap: 24px; display: flex; align-items: center; justify-content: center; }
+.polaroid {
+  background: #fff;
+  padding: 18px 18px 8px;
+  border-radius: 10px;
+  box-shadow: 0 20px 50px rgba(0,0,0,.25);
+  transform: rotate(-3deg);
+  animation: polaroid-in .8s cubic-bezier(.2,1.4,.4,1) both;
+  max-width: min(78vw, 520px);
+}
+.polaroid img { width: 100%; display: block; border-radius: 4px; -webkit-touch-callout: default; }
+.polaroid p { margin: 10px 0 4px; text-align: center; font-size: 32px; font-weight: 700; }
+@keyframes polaroid-in {
+  from { transform: translateY(80vh) rotate(18deg) scale(.6); opacity: 0; }
+  to { transform: rotate(-3deg); opacity: 1; }
+}

@@ -261,6 +261,24 @@ function tone(freq, start, dur, type = 'sine', gain = 0.18) {
   osc.stop(t + dur + 0.05);
 }
 
+// A tone that glides from one pitch to another (boing, whee).
+function slide(from, to, start, dur, type = 'sine', gain = 0.15) {
+  const ac = ctx();
+  if (!ac) return;
+  const t = ac.currentTime + start;
+  const osc = ac.createOscillator();
+  const g = ac.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(from, t);
+  osc.frequency.exponentialRampToValueAtTime(to, t + dur * 0.7);
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(gain, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  osc.connect(g).connect(ac.destination);
+  osc.start(t);
+  osc.stop(t + dur + 0.05);
+}
+
 // Filtered white noise, for snips, sprays and whooshes.
 let noiseBuffer = null;
 function noise(start, dur, { type = 'bandpass', freq = 2000, q = 1, gain = 0.15 } = {}) {
@@ -322,10 +340,27 @@ export function sfx(kind) {
       tone(randInt(500, 900), 0, 0.08, 'sine', 0.2);
       break;
     case 'tap':
-      tone(520, 0, 0.07, 'sine', 0.1);
+      tone(620, 0, 0.06, 'sine', 0.09);
+      tone(930, 0.04, 0.07, 'sine', 0.06);
+      break;
+    case 'boing':
+      slide(260, 720, 0, 0.22, 'sine', 0.16);
       break;
     case 'win':
-      [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.12, 0.3));
+      // A little celebration tune, with a soft chime on top.
+      [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => {
+        const t = [0, 0.11, 0.22, 0.33, 0.5, 0.61, 0.75][i];
+        tone(f, t, i === 6 ? 0.6 : 0.22, 'triangle', 0.16);
+        tone(f * 2, t, 0.15, 'sine', 0.05);
+      });
+      break;
+    case 'firework':
+      slide(400, 1400, 0, 0.25, 'sine', 0.05);
+      noise(0.25, 0.35, { type: 'lowpass', freq: 1200, gain: 0.2 });
+      for (let i = 0; i < 6; i++) noise(0.3 + Math.random() * 0.3, 0.04, { type: 'highpass', freq: 4000, gain: 0.08 });
+      break;
+    case 'whee':
+      slide(400, 1200, 0, 0.5, 'triangle', 0.1);
       break;
   }
 }
@@ -416,6 +451,42 @@ function renderStars() {
   });
 }
 
+// ---------- Page transitions & background ----------
+// Fade the page out, then go. Pages fade/slide in on load (CSS).
+export function go(url) {
+  stopSpeech?.();
+  document.body.classList.add('leaving');
+  setTimeout(() => (location.href = url), 180);
+}
+document.addEventListener('click', (e) => {
+  const a = e.target.closest?.('a[href]');
+  if (!a || a.target || a.hasAttribute('download') || e.metaKey || e.ctrlKey) return;
+  const url = new URL(a.href, location.href);
+  if (url.origin !== location.origin) return;
+  e.preventDefault();
+  sfx('tap');
+  go(url.href);
+});
+
+// Soft drifting clouds and rising bubbles behind everything (pure CSS animation, cheap to draw).
+function addSky() {
+  if (document.body.dataset.calm !== undefined || document.querySelector('.sky')) return;
+  const sky = document.createElement('div');
+  sky.className = 'sky';
+  sky.setAttribute('aria-hidden', 'true');
+  let html = '';
+  for (let i = 0; i < 4; i++) {
+    html += `<span class="cloud" style="top:${8 + i * 22}%;animation-duration:${60 + i * 17}s;animation-delay:-${i * 19}s;transform:scale(${0.7 + (i % 3) * 0.25})"></span>`;
+  }
+  for (let i = 0; i < 10; i++) {
+    html += `<span class="bubble-bg" style="left:${(i * 37) % 100}%;width:${14 + (i % 4) * 10}px;height:${14 + (i % 4) * 10}px;animation-duration:${14 + (i % 5) * 4}s;animation-delay:-${i * 3}s"></span>`;
+  }
+  sky.innerHTML = html;
+  document.body.prepend(sky);
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', addSky);
+else addSky();
+
 // ---------- Page chrome ----------
 // Builds the top bar: back button, title, repeat-the-question button, and star counter.
 // Returns controls so a game can change what Back and 🔊 do as she moves between screens.
@@ -430,7 +501,7 @@ export function topBar({ title, home = '../index.html' }) {
   bar.querySelector('h1').textContent = title;
   document.body.prepend(bar);
 
-  let backFn = () => (location.href = home);
+  let backFn = () => go(home);
   let repeatFn = null;
   const repeatBtn = bar.querySelector('[data-repeat]');
   bar.querySelector('[data-back]').addEventListener('click', () => {
@@ -441,7 +512,7 @@ export function topBar({ title, home = '../index.html' }) {
 
   return {
     onBack(fn) {
-      backFn = fn || (() => (location.href = home));
+      backFn = fn || (() => go(home));
     },
     onRepeat(fn) {
       repeatFn = fn;
@@ -483,23 +554,152 @@ export function modePicker({ main, bar, title, intro, modes }) {
 }
 
 // The end-of-round celebration with Play Again / Back buttons. Awards one star.
+// Fireworks drawn on a temporary full-screen canvas.
+export function fireworks(bursts = 5) {
+  const c = document.createElement('canvas');
+  c.className = 'fireworks';
+  const dpr = window.devicePixelRatio || 1;
+  c.width = innerWidth * dpr;
+  c.height = innerHeight * dpr;
+  document.body.appendChild(c);
+  const g = c.getContext('2d');
+  g.scale(dpr, dpr);
+  const sparks = [];
+  const colors = ['#ef4444', '#f97316', '#facc15', '#22c55e', '#3b82f6', '#a855f7', '#ec4899'];
+  for (let b = 0; b < bursts; b++) {
+    setTimeout(() => {
+      const x = innerWidth * (0.15 + Math.random() * 0.7);
+      const y = innerHeight * (0.15 + Math.random() * 0.4);
+      const col = pick(colors);
+      for (let i = 0; i < 46; i++) {
+        const a = (i / 46) * Math.PI * 2;
+        const v = 2 + Math.random() * 3.5;
+        sparks.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 60 + Math.random() * 20, col });
+      }
+      if (b % 2 === 0) sfx('firework');
+    }, b * 330);
+  }
+  let frames = 0;
+  (function tick() {
+    g.clearRect(0, 0, innerWidth, innerHeight);
+    for (const p of sparks) {
+      if (p.life <= 0) continue;
+      p.life--;
+      p.vy += 0.06;
+      p.vx *= 0.985;
+      p.x += p.vx;
+      p.y += p.vy;
+      g.globalAlpha = Math.min(1, p.life / 30);
+      g.fillStyle = p.col;
+      g.beginPath();
+      g.arc(p.x, p.y, 3.2, 0, Math.PI * 2);
+      g.fill();
+    }
+    if (++frames < 240) requestAnimationFrame(tick);
+    else c.remove();
+  })();
+}
+
+// Balloons float up; tapping one pops it.
+export function balloons(n = 8) {
+  const box = document.createElement('div');
+  box.className = 'balloons';
+  for (let i = 0; i < n; i++) {
+    const b = document.createElement('button');
+    b.className = 'balloon';
+    b.textContent = '🎈';
+    b.setAttribute('aria-label', 'balloon');
+    b.style.left = `${5 + Math.random() * 85}%`;
+    b.style.animationDuration = `${6 + Math.random() * 4}s`;
+    b.style.animationDelay = `${Math.random() * 1.5}s`;
+    b.style.filter = `hue-rotate(${Math.floor(Math.random() * 360)}deg)`;
+    b.addEventListener('pointerdown', () => {
+      sfx('pop');
+      const r = b.getBoundingClientRect();
+      burstAt(r.left + r.width / 2, r.top + r.height / 3);
+      b.remove();
+    });
+    box.appendChild(b);
+  }
+  document.body.appendChild(box);
+  setTimeout(() => box.remove(), 12000);
+  return box;
+}
+
+// A quick ring of sparkles at a point on screen.
+export function burstAt(x, y, bits = ['✨', '⭐', '💖', '🎉']) {
+  for (let i = 0; i < 8; i++) {
+    const el = document.createElement('span');
+    el.className = 'burst';
+    el.textContent = pick(bits);
+    const a = (i / 8) * Math.PI * 2;
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+    el.style.setProperty('--dx', `${Math.cos(a) * 70}px`);
+    el.style.setProperty('--dy', `${Math.sin(a) * 70}px`);
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 700);
+  }
+}
+
+// The big star flies up into the star counter, then the counter goes up.
+function flyStar(from) {
+  const target = document.querySelector('[data-stars]');
+  if (!from || !target) {
+    addStar(1);
+    return;
+  }
+  const a = from.getBoundingClientRect();
+  const b = target.getBoundingClientRect();
+  const star = document.createElement('div');
+  star.className = 'flying-star';
+  star.textContent = '⭐';
+  star.style.left = `${a.left + a.width / 2}px`;
+  star.style.top = `${a.top + a.height / 2}px`;
+  document.body.appendChild(star);
+  requestAnimationFrame(() => {
+    star.style.transform = `translate(${b.left + 30 - (a.left + a.width / 2)}px, ${b.top + b.height / 2 - (a.top + a.height / 2)}px) scale(0.35) rotate(360deg)`;
+  });
+  setTimeout(() => {
+    sfx('whee');
+  }, 100);
+  setTimeout(() => {
+    star.remove();
+    addStar(1);
+  }, 900);
+}
+
+// The end-of-round celebration with Play Again / Back buttons. Awards one star.
 export function doneScreen(main, { onAgain, onBack, message = `You did it, ${KID}!` }) {
-  addStar(1);
   sfx('win');
-  confetti(36);
+  confetti(30);
+  fireworks();
+  const floaters = balloons();
   main.innerHTML = `
     <div class="done-screen">
-      <div class="big">🌟</div>
+      <div class="done-row">
+        <div class="mascot-spot"></div>
+        <div class="big">🌟</div>
+      </div>
       <h2></h2>
-      <p class="note">You earned a star!</p>
+      <p class="note">You earned a star! Pop the balloons!</p>
       <div class="row">
         <button class="round-btn" data-again aria-label="Play again">🔁</button>
         <button class="round-btn" data-back aria-label="Back">🏠</button>
       </div>
     </div>`;
+  import('./mascot.js').then(({ unicornSVG }) => {
+    const spot = main.querySelector('.mascot-spot');
+    if (spot) spot.innerHTML = `<div class="mascot cheering">${unicornSVG()}</div>`;
+  });
   main.querySelector('h2').textContent = message;
-  main.querySelector('[data-again]').addEventListener('click', onAgain);
-  main.querySelector('[data-back]').addEventListener('click', onBack);
+  const leave = (fn) => () => {
+    floaters.remove();
+    fn();
+  };
+  main.querySelector('[data-again]').addEventListener('click', leave(onAgain));
+  main.querySelector('[data-back]').addEventListener('click', leave(onBack));
+  setTimeout(() => flyStar(main.querySelector('.done-screen .big')), 700);
   say(`${message} You earned a star!`);
 }
 

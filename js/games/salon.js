@@ -798,11 +798,37 @@ function salon(friend) {
         pageId: null,
       });
       addStar(1);
-      confetti(24);
-      say(`Cheese! I saved the picture of ${friend.name}.`);
+      // The friend wiggles happily, then the photo slides in like an instant-camera picture.
+      stage.classList.remove('happy-wiggle');
+      void stage.offsetWidth;
+      stage.classList.add('happy-wiggle');
+      setMood('giggle', 1400);
+      setTimeout(() => showPhoto(shot.toDataURL('image/jpeg', 0.9)), 700);
+      say(pick([`I love it! Thank you, ${KID}!`, `Wow, I look amazing! Thanks, ${KID}!`, `Best hairdo ever! Thank you, ${KID}!`]));
     } catch {
       say("Oops, I couldn't save that one.");
     }
+  }
+
+  function showPhoto(src) {
+    const overlay = el('div', 'overlay photo-reveal');
+    const card = el('div', 'polaroid');
+    const img = el('img');
+    img.src = src;
+    img.alt = `${friend.name}'s new hairdo`;
+    card.append(img, el('p', '', `${friend.name} ✨`));
+    const done = el('button', 'round-btn', '✔️');
+    done.setAttribute('aria-label', 'Done');
+    done.style.cssText = 'width:96px;height:96px;font-size:48px;background:#dff7e4';
+    overlay.append(card, done);
+    const close = () => {
+      sfx('tap');
+      overlay.remove();
+    };
+    overlay.addEventListener('click', close);
+    document.body.appendChild(overlay);
+    confetti(30);
+    sfx('win');
   }
 
   // --- canvas sizing ---
@@ -888,6 +914,15 @@ function salon(friend) {
   canvas.addEventListener('pointercancel', up);
 
   // --- tools ---
+  // Little sparkles where a tool touches the hair (just for show; not part of the hairdo).
+  const fx = [];
+  function sparkle(p, col, n = 2) {
+    if (fx.length > 160) return;
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      fx.push({ x: p.x + Math.cos(a) * 20, y: p.y + Math.sin(a) * 20, vx: Math.cos(a) * 1.5, vy: Math.sin(a) * 1.5 - 1, life: 30, col });
+    }
+  }
   let soundAt = 0;
   const throttle = (kind, ms) => {
     const now = performance.now();
@@ -962,6 +997,7 @@ function salon(friend) {
         break;
       }
       case 'grow': {
+        sparkle(p, '#4ade80');
         let grew = false;
         for (const s of st.strands) {
           if (s.pts.length > MAX_SEGS) continue;
@@ -980,6 +1016,7 @@ function salon(friend) {
         break;
       }
       case 'color': {
+        sparkle(p, color.hex === 'rainbow' ? `hsl(${hue}, 85%, 60%)` : color.hex, 3);
         let painted = false;
         hue = (hue + 6) % 360;
         const c = color.hex === 'rainbow' ? `hsl(${hue}, 85%, 55%)` : color.hex;
@@ -1016,6 +1053,7 @@ function salon(friend) {
       }
       case 'curl':
       case 'straight': {
+        sparkle(p, tool === 'curl' ? '#fde047' : '#e0f2fe');
         for (const s of st.strands) {
           if (!s.pts.some((q) => near(q, p, 45))) continue;
           s.curl = tool === 'curl' ? Math.min(1.2, s.curl + 0.06) : Math.max(0, s.curl - 0.08);
@@ -1063,6 +1101,11 @@ function salon(friend) {
   function loop(now) {
     for (const s of st.strands) {
       stepStrand(s, 0.35);
+      // Wet hair drips from its ends.
+      if (s.wet > 0.3 && s.pts.length > 3 && Math.random() < s.wet * 0.006) {
+        const tip = s.pts[s.pts.length - 1];
+        st.drops.push({ x: tip.x, y: tip.y, vy: 1.5 });
+      }
       if (!down && s.wet > 0) s.wet = Math.max(0, s.wet - 0.0008);
     }
     stepFalling(st);
@@ -1073,7 +1116,16 @@ function salon(friend) {
       b.t += 0.05;
       b.x += Math.sin(b.t) * 0.2;
     }
-    for (const d of st.drops) d.y += d.vy;
+    for (const d of st.drops) {
+      d.y += d.vy;
+      d.vy = Math.min(12, d.vy + 0.25);
+    }
+    for (const f of fx) {
+      f.x += f.vx;
+      f.y += f.vy;
+      f.life--;
+    }
+    for (let i = fx.length - 1; i >= 0; i--) if (fx[i].life <= 0) fx.splice(i, 1);
     st.drops = st.drops.filter((d) => d.y < H + 20);
     if (now > moodUntil && face.mood !== 'happy') face.mood = 'happy';
     face.blink = now > blinkAt && now < blinkAt + 140;
@@ -1081,8 +1133,7 @@ function salon(friend) {
 
     const dpr = window.devicePixelRatio || 1;
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    g.fillStyle = '#fff7e8';
-    g.fillRect(0, 0, canvas.width, canvas.height);
+    g.clearRect(0, 0, canvas.width, canvas.height);
     g.translate(ox, oy);
     g.scale(scale, scale);
     g.save();
@@ -1090,6 +1141,22 @@ function salon(friend) {
     g.roundRect ? g.roundRect(0, 0, W, H, 36) : g.rect(0, 0, W, H);
     g.clip();
     drawFriend(g, st, face);
+    for (const f of fx) {
+      g.globalAlpha = Math.min(1, f.life / 15);
+      g.fillStyle = f.col;
+      const r = 3 + (f.life % 10) / 3;
+      g.beginPath();
+      g.moveTo(f.x, f.y - r * 2);
+      g.lineTo(f.x + r * 0.6, f.y - r * 0.6);
+      g.lineTo(f.x + r * 2, f.y);
+      g.lineTo(f.x + r * 0.6, f.y + r * 0.6);
+      g.lineTo(f.x, f.y + r * 2);
+      g.lineTo(f.x - r * 0.6, f.y + r * 0.6);
+      g.lineTo(f.x - r * 2, f.y);
+      g.lineTo(f.x - r * 0.6, f.y - r * 0.6);
+      g.fill();
+    }
+    g.globalAlpha = 1;
     // Show the tool under her finger (a little above it, so the finger doesn't hide it).
     if ((down || now < cursorUntil) && last && tool !== 'sticker') {
       if (tool === 'color') {
