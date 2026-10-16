@@ -336,7 +336,7 @@ export function draw({ main, bar, resume = null }) {
       grid.innerHTML = '';
       for (const page of available().filter((p) => p.cat === catId)) {
         const b = el('button', 'page-thumb');
-        b.setAttribute('aria-label', page.name.replace('the ', ''));
+        b.setAttribute('aria-label', page.name.replace(/^the /, ''));
         const img = el('img');
         img.src = pageURL(page);
         img.alt = '';

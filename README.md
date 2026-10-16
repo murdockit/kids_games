@@ -43,6 +43,20 @@ Safari only lets web pages use the iPad's basic built-in voices, which sound rob
 
 Tap 💾 while drawing to save to **Free Play → My Pictures**, which keeps the newest 50 on that iPad. Tap a picture there to **keep drawing** or **delete** it. To copy one into the Photos app, open the picture, then **press and hold it → Save to Photos**.
 
+## Stars, stickers, and surprises
+
+- Every finished round earns a star. Every **3 stars** unlock a new sticker (42 in all), and every **10 stars** unlock a surprise: an extra outfit, hat, or glasses in the Hair Salon, or an extra coloring page. Rewards only add things; nothing that's there today gets locked.
+- Tap the ⭐ counter or the **📒 My Sticker Book** tile to see her collection and how many stars until the next sticker.
+- Collected stickers also show up as stamps in Draw and as stickers in the Hair Salon.
+
+## Progress for grown-ups
+
+**Grown-ups ⚙️ → 📈 Progress** shows rounds played each day for the last week, how often she gets each game right on the first try, the heart words she knows and the ones to practice, and the letters she mixes up (for example, *wanted B, tapped D*). Everything stays on the iPad. **Clear progress history** resets it.
+
+## Music
+
+Soft background music plays after her first tap. Each area has its own song, and the music gets quieter while the voice is talking. Turn it off in **Grown-ups ⚙️ → Background music**. All three songs are CC0 (free to use); see `music/CREDITS.md`.
+
 ## Good to know
 
 - **Keep the host's address fixed.** Safari saves her stars, word edits, and saved pictures for each address. If the computer's IP changes, they will seem to be gone (they come back if the old address returns). Set up a DHCP reservation on your router, or use the computer's hostname.
@@ -56,7 +70,13 @@ Tap 💾 while drawing to save to **Free Play → My Pictures**, which keeps the
 index.html, grownups.html   home screen and grown-ups screen
 games/*.html                one page per game
 js/common.js                speech, sounds, cheers, stars, top bar, mode picker
-js/quiz.js                  shared multiple-choice round runner
+js/quiz.js                  shared multiple-choice round runner (with the treasure jar)
+js/mascot.js                Sparkle the unicorn
+js/music.js                 background music (looping, quieter during speech)
+js/rewards.js               stickers every 3 stars, surprises every 10
+js/activity.js              progress log for the Grown-ups screen
+music/                      background songs (CC0) and credits
+fonts/                      Fredoka font (SIL Open Font License)
 js/words-store.js           heart words: starter file + this iPad's changes
 js/gallery-store.js         saved pictures (IndexedDB on the iPad)
 js/coloring-pages.js        coloring page line art (add a picture: one SVG entry, white-filled shapes)
