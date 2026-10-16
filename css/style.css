@@ -437,7 +437,7 @@ main.salon {
 }
 @media (orientation: portrait) {
   main.salon { flex-direction: column; }
-  .salon-tools { grid-template-columns: repeat(7, 78px); justify-content: center; gap: 10px; }
+  .salon-tools { grid-template-columns: repeat(8, 78px); justify-content: center; gap: 10px; }
 }
 .flash {
   position: fixed;

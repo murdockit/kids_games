@@ -3,6 +3,17 @@
 // drapes around the head. Scissors really cut strands, and the cut piece falls away.
 import { topBar, say, sfx, el, pick, randInt, askYesNo, confetti, addStar, stopSpeech, KID } from '../common.js';
 import { savePicture } from '../gallery-store.js';
+import {
+  OUTFITS,
+  CLOTHES_COLORS,
+  WEARABLES,
+  drawOutfit,
+  drawGlasses,
+  drawHat,
+  hairTop,
+  wearablePreview,
+  outfitPreview,
+} from './salon-wardrobe.js';
 
 const main = document.getElementById('app');
 const bar = topBar({ title: 'Hair Salon' });
@@ -30,7 +41,7 @@ const HAIR_COLORS = [
   ['teal', '#14b8a6'], ['green', '#22c55e'], ['orange', '#f97316'], ['yellow', '#facc15'], ['rainbow', 'rainbow'],
 ].map(([name, hex]) => ({ name, hex }));
 
-const STICKERS = ['🎀', '👑', '🕶️', '🌸', '🎩', '⭐', '🦋', '🧢', '💎', '🌈', '🍓', '❤️'];
+const STICKERS = ['⭐', '🦋', '🌸', '💎', '🌈', '🍓', '❤️', '✨', '🍭', '🐞', '🌟', '🎈'];
 
 const LINES = {
   hello: (f) => [`Hi! I'm ${f.name}. Can you do my hair?`, `Hello ${KID}! I'm ${f.name}. Let's make my hair fancy!`],
@@ -44,6 +55,8 @@ const LINES = {
   shampoo: ['Bubbles!', 'Bubble bubble!', 'It smells so good!'],
   water: ['Splash!', 'That is wet!', 'Brrr, cold!'],
   sticker: ['So fancy!', 'I look great!'],
+  clothes: ['I love my new clothes!', 'So stylish!', 'Do I look nice?'],
+  wear: ['How do I look?', 'So fancy!', 'I feel like royalty!'],
 };
 
 // What each tool says when picked: its name and how to use it, since she can't read the buttons.
@@ -65,6 +78,8 @@ const HINTS = [
   ['shampoo', 'Make some bubbles with the shampoo!'],
   ['curl', 'Make curls with the curler!'],
   ['dryer', 'Try the hair dryer!'],
+  ['clothes', 'Pick some new clothes!'],
+  ['wear', 'Try on a crown or sunglasses!'],
   ['sticker', 'Add a sticker!'],
   ['photo', 'Take a picture of your new hairdo!'],
 ];
@@ -151,7 +166,17 @@ function newState(f) {
   const strands = buildHair(f);
   // Let the hair settle into place before anyone sees it.
   for (let i = 0; i < 200; i++) strands.forEach((s) => stepStrand(s, 0.35));
-  return { friend: f, strands, falling: [], stickers: [], bubbles: [], drops: [] };
+  return {
+    friend: f,
+    strands,
+    falling: [],
+    stickers: [],
+    bubbles: [],
+    drops: [],
+    outfit: { id: 'cape' },
+    wear: { head: null, eyes: null },
+    hatY: null,
+  };
 }
 
 // ---------- Physics ----------
@@ -303,27 +328,13 @@ function drawFriend(g, st, face) {
   g.fill();
   g.globalAlpha = 1;
 
-  // Cape and neck
-  g.fillStyle = f.cape;
+  // Neck, then clothes
+  g.fillStyle = f.skin;
   g.strokeStyle = '#2b2d42';
   g.lineWidth = 5;
-  g.beginPath();
-  g.moveTo(90, H + 10);
-  g.quadraticCurveTo(110, 520, 300, 505);
-  g.quadraticCurveTo(490, 520, 510, H + 10);
-  g.closePath();
-  g.fill();
-  g.stroke();
-  g.fillStyle = 'rgba(255,255,255,0.35)';
-  for (let x = 130; x < 480; x += 60) {
-    g.beginPath();
-    g.arc(x, 600, 10, 0, Math.PI * 2);
-    g.fill();
-  }
-  g.fillStyle = f.skin;
-  g.fillRect(262, 440, 76, 75);
-  g.strokeRect(262, 440, 76, 75);
-  ellipse(g, 300, 512, 52, 14, '#fff');
+  g.fillRect(262, 440, 76, 80);
+  g.strokeRect(262, 440, 76, 80);
+  drawOutfit(g, f, st.outfit);
 
   // Ears (behind the head) and monster horns
   if (f.kind === 'cat') {
@@ -457,6 +468,9 @@ function drawFriend(g, st, face) {
   }
   g.textAlign = 'center';
   g.textBaseline = 'middle';
+  // Glasses, then a hat sitting on top of the hair
+  drawGlasses(g, f, st.wear);
+  drawHat(g, st.wear, (st.hatY ?? hairTop(st.strands)) + 22);
   for (const s of st.stickers) {
     g.font = `${s.size}px serif`;
     g.fillText(s.e, s.x, s.y);
@@ -567,7 +581,14 @@ function salon(friend) {
   addTool('straight', '〰️', 'Straightener');
   addTool('shampoo', '🫧', 'Shampoo');
   addTool('water', '🚿', 'Water');
-  addTool('sticker', '🎀', 'Stickers', openStickers);
+  addTool('clothes', '👕', 'Clothes', openClothes);
+  addTool('wear', '👑', 'Hats and glasses', openWear);
+  addTool('sticker', '⭐', 'Stickers', openStickers);
+  for (const id of ['clothes', 'wear']) {
+    btns[id].classList.add('action');
+    actionBtns[id] = btns[id];
+    delete btns[id];
+  }
   const photoBtn = addTool('photo', '📸', 'Take a picture', takePhoto);
   addTool('undo', '↩️', 'Undo', undoLast);
   addTool('reset', '🔄', 'New hair', resetHair);
@@ -625,6 +646,90 @@ function salon(friend) {
     );
   }
 
+  // A tray that stays open so she can try lots of things, with a big ✔ to close it.
+  function dressTray(title, sections) {
+    const overlay = el('div', 'overlay');
+    const box = el('div', 'overlay-box wide');
+    box.appendChild(el('p', 'prompt-text', title));
+    const refresh = [];
+    for (const items of sections) {
+      const grid = el('div', 'tray-grid');
+      for (const it of items) {
+        const b = el('button', 'tool-btn big swatch');
+        if (it.img) b.style.cssText = `background:#fff url(${it.img}) center/88% no-repeat`;
+        if (it.color) b.style.background = it.color;
+        b.setAttribute('aria-label', it.label);
+        b.addEventListener('click', () => {
+          sfx('tap');
+          remember();
+          it.pick();
+          refresh.forEach((r) => r());
+        });
+        refresh.push(() => b.classList.toggle('on', !!it.isOn?.()));
+        grid.appendChild(b);
+      }
+      box.appendChild(grid);
+    }
+    refresh.forEach((r) => r());
+    const done = el('button', 'round-btn yes', '✔️');
+    done.setAttribute('aria-label', 'Done');
+    done.style.cssText = 'width:96px;height:96px;font-size:48px;background:#dff7e4';
+    done.addEventListener('click', () => {
+      sfx('tap');
+      overlay.remove();
+    });
+    box.appendChild(done);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+  }
+
+  function openClothes() {
+    used.add('clothes');
+    say('Pick some clothes! Then pick a color.');
+    dressTray('Clothes', [
+      OUTFITS.map((o) => ({
+        label: o.name,
+        img: outfitPreview(o, friend, o.color),
+        isOn: () => st.outfit.id === o.id,
+        pick: () => {
+          st.outfit = { id: o.id, color: o.color };
+          say(o.name);
+          talk('clothes');
+        },
+      })),
+      CLOTHES_COLORS.map((c) => ({
+        label: `${c.name} clothes`,
+        color: c.hex,
+        isOn: () => st.outfit.color === c.hex,
+        pick: () => {
+          st.outfit = { ...st.outfit, color: c.hex };
+          say(c.name);
+        },
+      })),
+    ]);
+  }
+
+  function openWear() {
+    used.add('wear');
+    say('Try on a hat or glasses! Tap again to take it off.');
+    const items = (slot) =>
+      WEARABLES.filter((w) => w.slot === slot).map((w) => ({
+        label: w.name,
+        img: wearablePreview(w, friend),
+        isOn: () => st.wear[w.slot] === w.id,
+        pick: () => {
+          const on = st.wear[w.slot] === w.id;
+          st.wear = { ...st.wear, [w.slot]: on ? null : w.id };
+          if (on) say('Off!');
+          else {
+            say(w.name);
+            talk('wear');
+          }
+        },
+      }));
+    dressTray('Hats and glasses', [items('head'), items('eyes')]);
+  }
+
   function openStickers() {
     say('Pick something fancy!');
     trayOf('Stickers', STICKERS.map((s) => ({ html: s, label: `sticker ${s}`, value: s })), (it) => {
@@ -640,6 +745,8 @@ function salon(friend) {
   const snapshot = () => ({
     strands: st.strands.map((s) => ({ ...s, pts: s.pts.map((q) => ({ ...q })), bends: s.bends.slice() })),
     stickers: st.stickers.map((x) => ({ ...x })),
+    outfit: { ...st.outfit },
+    wear: { ...st.wear },
     bubbles: st.bubbles.map((x) => ({ ...x })),
   });
   function remember() {
@@ -740,7 +847,7 @@ function salon(friend) {
     if (tool === 'sticker') {
       dragSticker = [...st.stickers].reverse().find((s) => Math.hypot(s.x - p.x, s.y - p.y) < s.size / 2);
       if (!dragSticker) {
-        dragSticker = { e: sticker, x: p.x, y: p.y, size: 80 };
+        dragSticker = { e: sticker, x: p.x, y: p.y, size: 90 };
         st.stickers.push(dragSticker);
         sfx('pop');
         talk('sticker');
@@ -959,6 +1066,9 @@ function salon(friend) {
       if (!down && s.wet > 0) s.wet = Math.max(0, s.wet - 0.0008);
     }
     stepFalling(st);
+    // Hats follow the hair smoothly as it grows, gets cut or blows around.
+    const top = hairTop(st.strands);
+    st.hatY = st.hatY == null ? top : st.hatY + (top - st.hatY) * 0.08;
     for (const b of st.bubbles) {
       b.t += 0.05;
       b.x += Math.sin(b.t) * 0.2;
