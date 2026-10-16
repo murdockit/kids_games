@@ -15,10 +15,23 @@ export function runQuiz({ main, bar, count = 6, makeQuestion, onAnswer, onFinish
   let index = 0;
   let current = null;
   let firstTry = true;
+  let wrongs = 0;
+  let choicesEl = null;
+  let idle = null;
+
+  // If she goes quiet, say the question again (once), in case she missed it.
+  function waitForTap() {
+    clearTimeout(idle);
+    const el = choicesEl;
+    idle = setTimeout(() => {
+      if (el && main.contains(el) && !busy) say(current.say);
+    }, 12000);
+  }
 
   function render() {
     current = makeQuestion(index);
     firstTry = true;
+    wrongs = 0;
     main.innerHTML = '';
 
     const progress = document.createElement('div');
@@ -57,9 +70,11 @@ export function runQuiz({ main, bar, count = 6, makeQuestion, onAnswer, onFinish
     }
 
     main.append(progress, prompt, choices);
+    choicesEl = choices;
     bar.onRepeat(() => say(current.say));
     say(current.say);
     prefetch([current.praise]);
+    waitForTap();
   }
 
   let busy = false;
@@ -67,13 +82,21 @@ export function runQuiz({ main, bar, count = 6, makeQuestion, onAnswer, onFinish
     if (busy || btn.classList.contains('wrong')) return;
     const right = choice.value === current.answer;
     onAnswer?.(current, right, firstTry);
+    waitForTap();
     if (!right) {
       firstTry = false;
+      wrongs++;
       btn.classList.add('wrong');
+      // After two misses, the right answer bounces so she's never stuck.
+      if (wrongs >= 2) {
+        const i = current.choices.findIndex((c) => c.value === current.answer);
+        choicesEl.children[i]?.classList.add('help');
+      }
       const again = tryAgain(btn);
       await say(again);
       return;
     }
+    clearTimeout(idle);
     busy = true;
     btn.classList.add('right');
     main.querySelectorAll('.choice').forEach((b) => (b.disabled = true));
